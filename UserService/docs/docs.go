@@ -15,38 +15,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/example/Get/{id}": {
-            "get": {
-                "description": "description of function that get user by id",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "example"
-                ],
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Some ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "/example/GetAll": {
+        "/user-service/GetAll": {
             "get": {
                 "description": "description of function that get all users from DB",
                 "consumes": [
@@ -56,7 +25,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "example"
+                    "user-service"
                 ],
                 "summary": "GetAll",
                 "responses": {
@@ -69,7 +38,40 @@ const docTemplate = `{
                 }
             }
         },
-        "/example/test-api": {
+        "/user-service/WalletReplenishment": {
+            "post": {
+                "description": "add money",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user-service"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Some ID",
+                        "name": "id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Some money",
+                        "name": "money",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/user-service/test": {
             "get": {
                 "description": "do ping",
                 "consumes": [
@@ -79,9 +81,40 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "example"
+                    "user-service"
                 ],
                 "summary": "ping example",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/user-service/{id}": {
+            "get": {
+                "description": "description of function that get user by id",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user-service"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Some ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",

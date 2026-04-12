@@ -38,42 +38,47 @@ func createGin() {
 		})
 	})
 
-	docs.SwaggerInfo.BasePath = "/api/v1"
-	v1 := r.Group("/api/v1")
+	docs.SwaggerInfo.BasePath = "/api"
+	v1 := r.Group("/api")
 	{
-		eg := v1.Group("/example")
+		eg := v1.Group("/user-service")
 		{
-			eg.GET("/test-api", TestApi)
+			eg.GET("/test", TestApi)
 			eg.GET("/GetAll", GetUsers)
-			eg.GET("/Get/:id", GetUserById)
+			eg.GET("/:id", GetUserById)
+			//eg.PUT("/", AddUser)
+			//eg.PATCH("/", UpdateUser)
+			eg.DELETE("/:id", DeleteUser)
+			eg.POST("/WalletReplenishment", WalletReplenishment)
+			eg.POST("/spend-money", SpendMoney)
 		}
 	}
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
 	r.Run(":8080")
 }
 
-// @BasePath /api/v1
+// @BasePath /api
 // @Summary ping example
 // @Schemes
 // @Description do ping
-// @Tags example
+// @Tags user-service
 // @Accept json
 // @Produce json
 // @Success 200 {string} EndpointTest
-// @Router /example/test-api [get]
+// @Router /user-service/test [get]
 func TestApi(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, "This enpoint works!!!")
 }
 
-// @BasePath /api/v1
+// @BasePath /api
 // @Summary GetAll
 // @Schemes
 // @Description description of function that get all users from DB
-// @Tags example
+// @Tags user-service
 // @Accept json
 // @Produce json
 // @Success 200 {string} idk_WTF
-// @Router /example/GetAll [get]
+// @Router /user-service/GetAll [get]
 func GetUsers(ctx *gin.Context) {
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
@@ -101,14 +106,14 @@ func GetUsers(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, users)
 }
 
-// @BasePath /api/v1
+// @BasePath /api
 // @Description description of function that get user by id
-// @Tags example
+// @Tags user-service
 // @Accept json
 // @Produce json
 // @Param   id	path	string		true	"Some ID"
 // @Success 200 {string} idk_WTF
-// @Router /example/Get/{id} [get]
+// @Router /user-service/{id} [get]
 func GetUserById(ctx *gin.Context) {
 	id := ctx.Param("id")
 
@@ -134,3 +139,27 @@ func GetUserById(ctx *gin.Context) {
 	}
 	ctx.JSON(http.StatusOK, u)
 }
+
+func AddUser(ctx *gin.Context)    {}
+func UpdateUser(ctx *gin.Context) {}
+func DeleteUser(ctx *gin.Context) {
+	id := ctx.Param("id")
+	fmt.Println("Delete user with id:", id)
+}
+
+// @BasePath /api
+// @Description add money
+// @Tags user-service
+// @Accept json
+// @Param   id		query	string	false	"Some ID"
+// @Param   money	query	int		false	"Some money"
+// @Success 200 {string} idk_WTF
+// @Router /user-service/WalletReplenishment [POST]
+func WalletReplenishment(ctx *gin.Context) {
+	id := ctx.Query("id")
+	money := ctx.Query("money")
+
+	result := fmt.Sprintf("Add to wallet: %s, id: %s", money, id)
+	ctx.JSON(http.StatusOK, result)
+}
+func SpendMoney(ctx *gin.Context) {}

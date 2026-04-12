@@ -1,7 +1,7 @@
 info:
   contact: {}
 paths:
-  /example/Get/{id}:
+  /user-service/{id}:
     get:
       consumes:
       - application/json
@@ -20,8 +20,8 @@ paths:
           schema:
             type: string
       tags:
-      - example
-  /example/GetAll:
+      - user-service
+  /user-service/GetAll:
     get:
       consumes:
       - application/json
@@ -35,8 +35,29 @@ paths:
             type: string
       summary: GetAll
       tags:
-      - example
-  /example/test-api:
+      - user-service
+  /user-service/WalletReplenishment:
+    post:
+      consumes:
+      - application/json
+      description: add money
+      parameters:
+      - description: Some ID
+        in: query
+        name: id
+        type: string
+      - description: Some money
+        in: query
+        name: money
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      tags:
+      - user-service
+  /user-service/test:
     get:
       consumes:
       - application/json
@@ -50,5 +71,5 @@ paths:
             type: string
       summary: ping example
       tags:
-      - example
+      - user-service
 swagger: "2.0"
