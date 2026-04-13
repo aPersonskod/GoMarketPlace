@@ -1,3 +1,30 @@
+definitions:
+  main.UpdateUserDto:
+    properties:
+      email:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      role:
+        type: string
+    type: object
+  main.User:
+    properties:
+      email:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      password:
+        type: string
+      role:
+        type: string
+      wallet:
+        type: integer
+    type: object
 info:
   contact: {}
 paths:
@@ -6,6 +33,13 @@ paths:
       consumes:
       - application/json
       description: update user
+      parameters:
+      - description: User data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/main.UpdateUserDto'
       produces:
       - application/json
       responses:
@@ -19,6 +53,13 @@ paths:
       consumes:
       - application/json
       description: add user
+      parameters:
+      - description: User data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/main.User'
       produces:
       - application/json
       responses:

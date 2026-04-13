@@ -1,4 +1,4 @@
-module marketplace
+module user_service
 
 go 1.25.6
 
