@@ -15,7 +15,49 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/user-service/GetAll": {
+        "/user-service/": {
+            "put": {
+                "description": "add user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user-service"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "description": "update user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user-service"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/user-service/get-all": {
             "get": {
                 "description": "description of function that get all users from DB",
                 "consumes": [
@@ -38,9 +80,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/user-service/WalletReplenishment": {
+        "/user-service/spend-money": {
             "post": {
-                "description": "add money",
+                "description": "spend money",
                 "consumes": [
                     "application/json"
                 ],
@@ -94,9 +136,71 @@ const docTemplate = `{
                 }
             }
         },
+        "/user-service/wallet-replenishment": {
+            "post": {
+                "description": "add money",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user-service"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Some ID",
+                        "name": "id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Some money",
+                        "name": "money",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/user-service/{id}": {
             "get": {
                 "description": "description of function that get user by id",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user-service"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Some ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "delete user",
                 "consumes": [
                     "application/json"
                 ],

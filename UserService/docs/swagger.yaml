@@ -1,7 +1,53 @@
 info:
   contact: {}
 paths:
+  /user-service/:
+    patch:
+      consumes:
+      - application/json
+      description: update user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      tags:
+      - user-service
+    put:
+      consumes:
+      - application/json
+      description: add user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      tags:
+      - user-service
   /user-service/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: delete user
+      parameters:
+      - description: Some ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      tags:
+      - user-service
     get:
       consumes:
       - application/json
@@ -21,7 +67,7 @@ paths:
             type: string
       tags:
       - user-service
-  /user-service/GetAll:
+  /user-service/get-all:
     get:
       consumes:
       - application/json
@@ -36,11 +82,11 @@ paths:
       summary: GetAll
       tags:
       - user-service
-  /user-service/WalletReplenishment:
+  /user-service/spend-money:
     post:
       consumes:
       - application/json
-      description: add money
+      description: spend money
       parameters:
       - description: Some ID
         in: query
@@ -70,6 +116,27 @@ paths:
           schema:
             type: string
       summary: ping example
+      tags:
+      - user-service
+  /user-service/wallet-replenishment:
+    post:
+      consumes:
+      - application/json
+      description: add money
+      parameters:
+      - description: Some ID
+        in: query
+        name: id
+        type: string
+      - description: Some money
+        in: query
+        name: money
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
       tags:
       - user-service
 swagger: "2.0"

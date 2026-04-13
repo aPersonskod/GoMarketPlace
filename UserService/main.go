@@ -4,10 +4,12 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	docs "marketplace/docs"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	_ "github.com/lib/pq"
 	swaggerfiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -19,7 +21,7 @@ type User struct {
 	Id       string `json:"id"`
 	Name     string `json:"name"`
 	Email    string `json:"email"`
-	Password string `json:"-"`
+	Password string `json:"password"`
 	Wallet   int    `json:"wallet"`
 	Role     string `json:"role"`
 }
@@ -44,12 +46,12 @@ func createGin() {
 		eg := v1.Group("/user-service")
 		{
 			eg.GET("/test", TestApi)
-			eg.GET("/GetAll", GetUsers)
+			eg.GET("/get-all", GetUsers)
 			eg.GET("/:id", GetUserById)
-			//eg.PUT("/", AddUser)
-			//eg.PATCH("/", UpdateUser)
+			eg.PUT("/", AddUser)
+			eg.PATCH("/", UpdateUser)
 			eg.DELETE("/:id", DeleteUser)
-			eg.POST("/WalletReplenishment", WalletReplenishment)
+			eg.POST("/wallet-replenishment", WalletReplenishment)
 			eg.POST("/spend-money", SpendMoney)
 		}
 	}
@@ -78,7 +80,7 @@ func TestApi(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Success 200 {string} idk_WTF
-// @Router /user-service/GetAll [get]
+// @Router /user-service/get-all [get]
 func GetUsers(ctx *gin.Context) {
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
@@ -140,11 +142,92 @@ func GetUserById(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, u)
 }
 
-func AddUser(ctx *gin.Context)    {}
-func UpdateUser(ctx *gin.Context) {}
+// @BasePath /api
+// @Description add user
+// @Tags user-service
+// @Accept json
+// @Produce json
+// @Success 200 {string} idk_WTF
+// @Router /user-service/ [PUT]
+func AddUser(ctx *gin.Context) {
+	var user User
+	if err := ctx.ShouldBindJSON(&user); err != nil {
+		ctx.JSON(http.StatusBadRequest, err)
+		return
+	}
+
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	newId := uuid.New()
+	user.Id = fmt.Sprintf("%s", newId)
+	query := fmt.Sprintf("INSERT INTO public.\"Users\" (\"Id\", \"Name\", \"Email\", \"Password\", \"Wallet\", \"Role\") VALUES ('%s','%s', '%s', '%s', %d, '%s')",
+		user.Id, user.Name, user.Email, user.Password, user.Wallet, user.Role)
+	_, err = db.Exec(query)
+	if err != nil {
+		panic(err)
+	}
+
+	ctx.JSON(http.StatusOK, user)
+}
+
+// @BasePath /api
+// @Description update user
+// @Tags user-service
+// @Accept json
+// @Produce json
+// @Success 200 {string} idk_WTF
+// @Router /user-service/ [PATCH]
+func UpdateUser(ctx *gin.Context) {
+	var user User
+	if err := ctx.ShouldBindJSON(&user); err != nil {
+		ctx.JSON(http.StatusBadRequest, err)
+		return
+	}
+
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	query := fmt.Sprintf("UPDATE public.\"Users\" SET \"Name\" = '%s', \"Email\" = '%s', \"Password\" = '%s', \"Wallet\" = %d, \"Role\" = '%s'",
+		user.Name, user.Email, user.Password, user.Wallet, user.Role)
+	_, err = db.Exec(query)
+	if err != nil {
+		panic(err)
+	}
+
+	ctx.JSON(http.StatusOK, user)
+}
+
+// @BasePath /api
+// @Description delete user
+// @Tags user-service
+// @Accept json
+// @Produce json
+// @Param   id	path	string		true	"Some ID"
+// @Success 200 {string} idk_WTF
+// @Router /user-service/{id} [DELETE]
 func DeleteUser(ctx *gin.Context) {
 	id := ctx.Param("id")
-	fmt.Println("Delete user with id:", id)
+
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	query := fmt.Sprintf("DELETE FROM public.\"Users\" WHERE \"Id\" = '%s'", id)
+	_, err = db.Exec(query)
+	if err != nil {
+		panic(err)
+	}
+
+	ctx.JSON(http.StatusOK, "")
 }
 
 // @BasePath /api
@@ -153,13 +236,82 @@ func DeleteUser(ctx *gin.Context) {
 // @Accept json
 // @Param   id		query	string	false	"Some ID"
 // @Param   money	query	int		false	"Some money"
-// @Success 200 {string} idk_WTF
-// @Router /user-service/WalletReplenishment [POST]
+// @Success 200 {string} Ok
+// @Router /user-service/wallet-replenishment [POST]
 func WalletReplenishment(ctx *gin.Context) {
 	id := ctx.Query("id")
-	money := ctx.Query("money")
+	money, err := strconv.Atoi(ctx.Query("money"))
 
-	result := fmt.Sprintf("Add to wallet: %s, id: %s", money, id)
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	getQuery := fmt.Sprintf("SELECT * FROM public.\"Users\" WHERE \"Id\" = '%s'", id)
+	rows, err := db.Query(getQuery)
+	if err != nil {
+		panic(err)
+	}
+
+	u := User{}
+	for rows.Next() {
+		err := rows.Scan(&u.Id, &u.Name, &u.Email, &u.Password, &u.Wallet, &u.Role)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+	}
+
+	query := fmt.Sprintf("UPDATE public.\"Users\" SET \"Wallet\" = %d", u.Wallet+money)
+	_, err = db.Exec(query)
+	if err != nil {
+		panic(err)
+	}
+
+	result := fmt.Sprintf("wallet before: %d, wallet after: %d", u.Wallet, u.Wallet+money)
 	ctx.JSON(http.StatusOK, result)
 }
-func SpendMoney(ctx *gin.Context) {}
+
+// @BasePath /api
+// @Description spend money
+// @Tags user-service
+// @Accept json
+// @Param   id		query	string	false	"Some ID"
+// @Param   money	query	int		false	"Some money"
+// @Success 200 {string} Ok
+// @Router /user-service/spend-money [POST]
+func SpendMoney(ctx *gin.Context) {
+	id := ctx.Query("id")
+	money, err := strconv.Atoi(ctx.Query("money"))
+
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	getQuery := fmt.Sprintf("SELECT * FROM public.\"Users\" WHERE \"Id\" = '%s'", id)
+	rows, err := db.Query(getQuery)
+	if err != nil {
+		panic(err)
+	}
+
+	u := User{}
+	for rows.Next() {
+		err := rows.Scan(&u.Id, &u.Name, &u.Email, &u.Password, &u.Wallet, &u.Role)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+	}
+
+	query := fmt.Sprintf("UPDATE public.\"Users\" SET \"Wallet\" = %d", u.Wallet-money)
+	_, err = db.Exec(query)
+	if err != nil {
+		panic(err)
+	}
+
+	result := fmt.Sprintf("wallet before: %d, wallet after: %d", u.Wallet, u.Wallet-money)
+	ctx.JSON(http.StatusOK, result)
+}
