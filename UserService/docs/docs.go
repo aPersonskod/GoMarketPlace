@@ -16,8 +16,28 @@ const docTemplate = `{
     "basePath": "{{.BasePath}}",
     "paths": {
         "/user-service/": {
+            "get": {
+                "description": "description of function that get user by id",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user-service"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
             "put": {
-                "description": "add user",
+                "description": "user registaration",
                 "consumes": [
                     "application/json"
                 ],
@@ -34,7 +54,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/main.User"
+                            "$ref": "#/definitions/types.User"
                         }
                     }
                 ],
@@ -65,7 +85,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/main.UpdateUserDto"
+                            "$ref": "#/definitions/types.UpdateUserDto"
                         }
                     }
                 ],
@@ -92,6 +112,39 @@ const docTemplate = `{
                     "user-service"
                 ],
                 "summary": "GetAll",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/user-service/login": {
+            "post": {
+                "description": "add money",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "parameters": [
+                    {
+                        "description": "User data",
+                        "name": "credentials",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.UserCredentials"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -192,35 +245,6 @@ const docTemplate = `{
             }
         },
         "/user-service/{id}": {
-            "get": {
-                "description": "description of function that get user by id",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "user-service"
-                ],
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Some ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            },
             "delete": {
                 "description": "delete user",
                 "consumes": [
@@ -253,7 +277,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "main.UpdateUserDto": {
+        "types.UpdateUserDto": {
             "type": "object",
             "properties": {
                 "email": {
@@ -270,7 +294,7 @@ const docTemplate = `{
                 }
             }
         },
-        "main.User": {
+        "types.User": {
             "type": "object",
             "properties": {
                 "email": {
@@ -290,6 +314,17 @@ const docTemplate = `{
                 },
                 "wallet": {
                     "type": "integer"
+                }
+            }
+        },
+        "types.UserCredentials": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
                 }
             }
         }

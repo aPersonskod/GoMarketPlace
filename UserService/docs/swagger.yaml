@@ -1,5 +1,5 @@
 definitions:
-  main.UpdateUserDto:
+  types.UpdateUserDto:
     properties:
       email:
         type: string
@@ -10,7 +10,7 @@ definitions:
       role:
         type: string
     type: object
-  main.User:
+  types.User:
     properties:
       email:
         type: string
@@ -25,10 +25,30 @@ definitions:
       wallet:
         type: integer
     type: object
+  types.UserCredentials:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
 info:
   contact: {}
 paths:
   /user-service/:
+    get:
+      consumes:
+      - application/json
+      description: description of function that get user by id
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      tags:
+      - user-service
     patch:
       consumes:
       - application/json
@@ -39,7 +59,7 @@ paths:
         name: user
         required: true
         schema:
-          $ref: '#/definitions/main.UpdateUserDto'
+          $ref: '#/definitions/types.UpdateUserDto'
       produces:
       - application/json
       responses:
@@ -52,14 +72,14 @@ paths:
     put:
       consumes:
       - application/json
-      description: add user
+      description: user registaration
       parameters:
       - description: User data
         in: body
         name: user
         required: true
         schema:
-          $ref: '#/definitions/main.User'
+          $ref: '#/definitions/types.User'
       produces:
       - application/json
       responses:
@@ -74,25 +94,6 @@ paths:
       consumes:
       - application/json
       description: delete user
-      parameters:
-      - description: Some ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            type: string
-      tags:
-      - user-service
-    get:
-      consumes:
-      - application/json
-      description: description of function that get user by id
       parameters:
       - description: Some ID
         in: path
@@ -123,6 +124,27 @@ paths:
       summary: GetAll
       tags:
       - user-service
+  /user-service/login:
+    post:
+      consumes:
+      - application/json
+      description: add money
+      parameters:
+      - description: User data
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/types.UserCredentials'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      tags:
+      - auth
   /user-service/spend-money:
     post:
       consumes:

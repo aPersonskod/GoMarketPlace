@@ -16,6 +16,11 @@ type UpdateUserDto struct {
 	Role  string `json:"role"`
 }
 
+type UserCredentials struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
 type UserDto struct {
 	Id     string `json:"id"`
 	Name   string `json:"name"`

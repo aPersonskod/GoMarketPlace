@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"user_service/middleware"
 	"user_service/services"
 	"user_service/types"
 
@@ -39,14 +40,17 @@ func createGin() {
 	{
 		eg := v1.Group("/user-service")
 		{
-			eg.GET("/test", TestApi)
-			eg.GET("/get-all", GetUsers)
-			eg.GET("/:id", GetUserById)
+			eg.POST("/login", Login)
 			eg.PUT("/", AddUser)
-			eg.PATCH("/", UpdateUser)
-			eg.DELETE("/:id", DeleteUser)
-			eg.POST("/wallet-replenishment", WalletReplenishment)
-			eg.POST("/spend-money", SpendMoney)
+			eg.GET("/test", TestApi)
+			//need auth
+			wa := eg.Use(middleware.JwtAuthMiddleware())
+			wa.GET("/get-all", GetUsers)
+			wa.GET("/", GetUser)
+			wa.PATCH("/", UpdateUser)
+			wa.DELETE("/:id", DeleteUser)
+			wa.POST("/wallet-replenishment", WalletReplenishment)
+			wa.POST("/spend-money", SpendMoney)
 		}
 	}
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
@@ -89,12 +93,13 @@ func GetUsers(ctx *gin.Context) {
 // @Tags user-service
 // @Accept json
 // @Produce json
-// @Param   id	path	string		true	"Some ID"
+/* // @Param   id	path	string		true	"Some ID" */
 // @Success 200 {string} idk_WTF
-// @Router /user-service/{id} [get]
-func GetUserById(ctx *gin.Context) {
-	id := ctx.Param("id")
-	u, err := Service.GetUserById(id)
+// @Router /user-service/ [get]
+func GetUser(ctx *gin.Context) {
+	//id := ctx.Param("id")
+	id, _ := ctx.Get("id") //protected data
+	u, err := Service.GetUserById(fmt.Sprint(id))
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, err)
 	}
@@ -102,11 +107,11 @@ func GetUserById(ctx *gin.Context) {
 }
 
 // @BasePath /api
-// @Description add user
+// @Description user registaration
 // @Tags user-service
 // @Accept json
 // @Produce json
-// @Param user	body	User	true	"User data"
+// @Param user	body	types.User	true	"User data"
 // @Success 200 {string} idk_WTF
 // @Router /user-service/ [PUT]
 func AddUser(ctx *gin.Context) {
@@ -128,7 +133,7 @@ func AddUser(ctx *gin.Context) {
 // @Tags user-service
 // @Accept json
 // @Produce json
-// @Param user	body	UpdateUserDto	true	"User data"
+// @Param user	body	types.UpdateUserDto	true	"User data"
 // @Success 200 {string} idk_WTF
 // @Router /user-service/ [PATCH]
 func UpdateUser(ctx *gin.Context) {
@@ -202,4 +207,38 @@ func SpendMoney(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, err)
 	}
 	ctx.JSON(http.StatusOK, u)
+}
+
+// @BasePath /api
+// @Description add money
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param credentials	body	types.UserCredentials	true	"User data"
+// @Success 200 {string} Ok
+// @Router /user-service/login [POST]
+func Login(ctx *gin.Context) {
+	var credentials types.UserCredentials
+	if err := ctx.ShouldBindJSON(&credentials); err != nil {
+		ctx.JSON(http.StatusBadRequest, err)
+		return
+	}
+
+	user, err := Service.GetUserByEmail(credentials.Email)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if user.Email != credentials.Email || user.Password != credentials.Password {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Wrong email or password"})
+		return
+	}
+
+	token, err := services.GenerateToken(user.Id, user.Role)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Token generation failed"})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"token": token})
 }

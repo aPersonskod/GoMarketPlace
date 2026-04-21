@@ -5,8 +5,28 @@
     },
     "paths": {
         "/user-service/": {
+            "get": {
+                "description": "description of function that get user by id",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user-service"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
             "put": {
-                "description": "add user",
+                "description": "user registaration",
                 "consumes": [
                     "application/json"
                 ],
@@ -23,7 +43,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/main.User"
+                            "$ref": "#/definitions/types.User"
                         }
                     }
                 ],
@@ -54,7 +74,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/main.UpdateUserDto"
+                            "$ref": "#/definitions/types.UpdateUserDto"
                         }
                     }
                 ],
@@ -81,6 +101,39 @@
                     "user-service"
                 ],
                 "summary": "GetAll",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/user-service/login": {
+            "post": {
+                "description": "add money",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "parameters": [
+                    {
+                        "description": "User data",
+                        "name": "credentials",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.UserCredentials"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -181,35 +234,6 @@
             }
         },
         "/user-service/{id}": {
-            "get": {
-                "description": "description of function that get user by id",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "user-service"
-                ],
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Some ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            },
             "delete": {
                 "description": "delete user",
                 "consumes": [
@@ -242,7 +266,7 @@
         }
     },
     "definitions": {
-        "main.UpdateUserDto": {
+        "types.UpdateUserDto": {
             "type": "object",
             "properties": {
                 "email": {
@@ -259,7 +283,7 @@
                 }
             }
         },
-        "main.User": {
+        "types.User": {
             "type": "object",
             "properties": {
                 "email": {
@@ -279,6 +303,17 @@
                 },
                 "wallet": {
                     "type": "integer"
+                }
+            }
+        },
+        "types.UserCredentials": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
                 }
             }
         }
