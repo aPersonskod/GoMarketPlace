@@ -9,6 +9,9 @@ import (
 	"github.com/google/uuid"
 )
 
+const UserRole string = "user"
+const AdminRole string = "admin"
+
 type IUserService interface {
 	GetUsers() ([]types.UserDto, error)
 	GetUserById(id string) (*types.UserDto, error)

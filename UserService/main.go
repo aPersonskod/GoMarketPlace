@@ -21,12 +21,7 @@ var connStr string = "user=postgres password=password dbname=marketplace-users-d
 var Service services.IUserService
 
 func main() {
-	fmt.Println("Hello blya")
 	Service = services.UserService{ConnStr: connStr}
-	createGin()
-}
-
-func createGin() {
 	r := gin.Default()
 
 	r.GET("/ping", func(ctx *gin.Context) {
@@ -48,7 +43,7 @@ func createGin() {
 			wa.GET("/get-all", GetUsers)
 			wa.GET("/", GetUser)
 			wa.PATCH("/", UpdateUser)
-			wa.DELETE("/:id", DeleteUser)
+			wa.DELETE("/", DeleteUser)
 			wa.POST("/wallet-replenishment", WalletReplenishment)
 			wa.POST("/spend-money", SpendMoney)
 		}
@@ -80,10 +75,15 @@ func TestApi(ctx *gin.Context) {
 // @Success 200 {string} idk_WTF
 // @Router /user-service/get-all [get]
 func GetUsers(ctx *gin.Context) {
-
+	role, _ := ctx.Get("role") // protected data
+	if role != services.AdminRole {
+		ctx.JSON(http.StatusForbidden, gin.H{"error": "You don't have sufficient permissions"})
+		return
+	}
 	users, err := Service.GetUsers()
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
 	ctx.JSON(http.StatusOK, users)
 }
@@ -98,10 +98,11 @@ func GetUsers(ctx *gin.Context) {
 // @Router /user-service/ [get]
 func GetUser(ctx *gin.Context) {
 	//id := ctx.Param("id")
-	id, _ := ctx.Get("id") //protected data
+	id, _ := ctx.Get("id") // protected data
 	u, err := Service.GetUserById(fmt.Sprint(id))
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, err)
+		return
 	}
 	ctx.JSON(http.StatusOK, u)
 }
@@ -124,6 +125,7 @@ func AddUser(ctx *gin.Context) {
 	u, err := Service.AddUser(&user)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, err)
+		return
 	}
 	ctx.JSON(http.StatusOK, u)
 }
@@ -146,6 +148,7 @@ func UpdateUser(ctx *gin.Context) {
 	u, err := Service.UpdateUser(&user)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, err)
+		return
 	}
 	ctx.JSON(http.StatusOK, u)
 }
@@ -157,13 +160,14 @@ func UpdateUser(ctx *gin.Context) {
 // @Produce json
 // @Param   id	path	string		true	"Some ID"
 // @Success 200 {string} idk_WTF
-// @Router /user-service/{id} [DELETE]
+// @Router /user-service/ [DELETE]
 func DeleteUser(ctx *gin.Context) {
-	id := ctx.Param("id")
-
-	err := Service.DeleteUser(id)
+	//id := ctx.Param("id")
+	id, _ := ctx.Get("id")
+	err := Service.DeleteUser(fmt.Sprint(id))
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, err)
+		return
 	}
 	ctx.JSON(http.StatusOK, "Successfuly deleted")
 }
@@ -172,20 +176,21 @@ func DeleteUser(ctx *gin.Context) {
 // @Description add money
 // @Tags user-service
 // @Accept json
-// @Param   id		query	string	false	"Some ID"
 // @Param   money	query	int		false	"Some money"
 // @Success 200 {string} Ok
 // @Router /user-service/wallet-replenishment [POST]
 func WalletReplenishment(ctx *gin.Context) {
-	id := ctx.Query("id")
+	id, _ := ctx.Get("id")
 	money, err := strconv.Atoi(ctx.Query("money"))
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, err)
+		return
 	}
 
-	u, err := Service.WalletReplenishment(id, money)
+	u, err := Service.WalletReplenishment(fmt.Sprint(id), money)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, err)
+		return
 	}
 	ctx.JSON(http.StatusOK, u)
 }
@@ -194,17 +199,18 @@ func WalletReplenishment(ctx *gin.Context) {
 // @Description spend money
 // @Tags user-service
 // @Accept json
-// @Param   id		query	string	false	"Some ID"
 // @Param   money	query	int		false	"Some money"
 // @Success 200 {string} Ok
 // @Router /user-service/spend-money [POST]
 func SpendMoney(ctx *gin.Context) {
-	id := ctx.Query("id")
+	//id := ctx.Query("id")
+	id, _ := ctx.Get("id")
 	money, err := strconv.Atoi(ctx.Query("money"))
 
-	u, err := Service.SpendMoney(id, money)
+	u, err := Service.SpendMoney(fmt.Sprint(id), money)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, err)
+		return
 	}
 	ctx.JSON(http.StatusOK, u)
 }
