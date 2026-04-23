@@ -1,0 +1,39 @@
+info:
+  contact: {}
+paths:
+  /product-service/{id}:
+    get:
+      consumes:
+      - application/json
+      description: description of function that get product by id
+      parameters:
+      - description: Some ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      tags:
+      - product-service
+  /product-service/get-all:
+    get:
+      consumes:
+      - application/json
+      description: description of function that get all products from DB
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: GetAll
+      tags:
+      - product-service
+swagger: "2.0"
