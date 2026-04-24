@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"product_service/configs"
 	docs "product_service/docs"
 	"product_service/middleware"
 
@@ -39,10 +40,11 @@ func main() {
 		}
 	}
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
-	r.Run(":8081")
+	r.Run(fmt.Sprintf(":%s", configs.Env.Port))
 }
 
-var connStr string = "user=postgres password=password dbname=marketplace-product-catalog-db sslmode=disable"
+var connStr string = fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable",
+	configs.Env.DbUser, configs.Env.DbPassword, configs.Env.DbName)
 
 type Product struct {
 	Id   string `gorm:"column:Id"`

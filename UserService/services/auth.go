@@ -2,11 +2,12 @@ package services
 
 import (
 	"time"
+	"user_service/configs"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var JwtSecret = []byte("my_important_secret")
+var JwtSecret = []byte(configs.Env.JwtSecret)
 
 type Claims struct {
 	Id   string `json:"id"`
@@ -20,7 +21,7 @@ func GenerateToken(id, role string) (string, error) {
 		Role: role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   id,
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 60)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * time.Duration(configs.Env.ExpirationMins))),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}

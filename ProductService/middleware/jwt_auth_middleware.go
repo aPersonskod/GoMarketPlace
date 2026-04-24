@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"product_service/configs"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -11,7 +12,7 @@ import (
 const UserRole string = "user"
 const AdminRole string = "admin"
 
-var JwtSecret = []byte("my_important_secret")
+var JwtSecret = []byte(configs.Env.JwtSecret)
 
 type Claims struct {
 	Id   string `json:"id"`

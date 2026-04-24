@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"user_service/configs"
 	"user_service/middleware"
 	"user_service/services"
 	"user_service/types"
@@ -16,7 +17,8 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-var connStr string = "user=postgres password=password dbname=marketplace-users-db sslmode=disable"
+var connStr string = fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable",
+	configs.Env.DbUser, configs.Env.DbPassword, configs.Env.DbName)
 
 var Service services.IUserService
 
@@ -49,7 +51,7 @@ func main() {
 		}
 	}
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
-	r.Run(":8080")
+	r.Run(fmt.Sprintf(":%s", configs.Env.Port))
 }
 
 // @BasePath /api
