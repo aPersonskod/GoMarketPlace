@@ -1,0 +1,155 @@
+info:
+  contact: {}
+paths:
+  /order-service/add-order:
+    put:
+      consumes:
+      - application/json
+      description: add order
+      parameters:
+      - description: Product id
+        in: query
+        name: productId
+        type: string
+      - description: Cart id
+        in: query
+        name: cartId
+        type: string
+      - description: Quantity
+        in: query
+        name: quantity
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      tags:
+      - order-service
+  /order-service/confirm-cart:
+    post:
+      consumes:
+      - application/json
+      description: confirm cart
+      parameters:
+      - description: Place id
+        in: query
+        name: placeId
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      tags:
+      - order-service/cart
+  /order-service/delete-order/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: delete order
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      tags:
+      - order-service
+  /order-service/get-cart:
+    get:
+      consumes:
+      - application/json
+      description: description of function that get cart to auth user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      tags:
+      - order-service/cart
+  /order-service/get-cart-orders/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get orders by cart id from db
+      parameters:
+      - description: Cart ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: GetOrders
+      tags:
+      - order-service
+  /order-service/get-place/{id}:
+    get:
+      consumes:
+      - application/json
+      description: description of function that get place by id
+      parameters:
+      - description: Place ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      tags:
+      - order-service/place
+  /order-service/get-places:
+    get:
+      consumes:
+      - application/json
+      description: description of function that get all places from DB
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: GetPlaces
+      tags:
+      - order-service/place
+  /order-service/mark-cart-as-bought:
+    post:
+      consumes:
+      - application/json
+      description: confirm cart
+      parameters:
+      - description: Place id
+        in: query
+        name: placeId
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      tags:
+      - order-service/cart
+swagger: "2.0"

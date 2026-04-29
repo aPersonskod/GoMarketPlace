@@ -11,6 +11,7 @@ import (
 
 const UserRole string = "user"
 const AdminRole string = "admin"
+const tableName string = "public.\"Users\""
 
 type IUserService interface {
 	GetUsers() ([]types.UserDto, error)
@@ -34,7 +35,7 @@ func (service UserService) GetUsers() ([]types.UserDto, error) {
 	}
 	defer db.Close()
 
-	rows, err := db.Query("SELECT * FROM public.\"Users\"")
+	rows, err := db.Query(fmt.Sprintf("SELECT * FROM %s", tableName))
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +61,7 @@ func (service UserService) GetUserById(id string) (*types.UserDto, error) {
 	}
 	defer db.Close()
 
-	query := "SELECT * FROM public.\"Users\" WHERE \"Id\" = $1"
+	query := fmt.Sprintf("SELECT * FROM %s WHERE \"Id\" = $1", tableName)
 	rows, err := db.Query(query, id)
 	if err != nil {
 		return nil, err
@@ -86,7 +87,8 @@ func (service UserService) GetUserByEmail(email string) (*types.User, error) {
 	}
 	defer db.Close()
 
-	rows, err := db.Query("SELECT * FROM public.\"Users\" WHERE \"Email\" = $1 limit 1", email)
+	query := fmt.Sprintf("SELECT * FROM %s WHERE \"Email\" = $1 limit 1", tableName)
+	rows, err := db.Query(query, email)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +118,7 @@ func (service UserService) AddUser(u *types.User) (*types.UserDto, error) {
 
 	newId := uuid.New()
 	u.Id = fmt.Sprintf("%s", newId)
-	query := "INSERT INTO public.\"Users\" (\"Id\", \"Name\", \"Email\", \"Password\", \"Wallet\", \"Role\") VALUES ($1, $2, $3, $4, $5, $6)"
+	query := fmt.Sprintf("INSERT INTO %s (\"Id\", \"Name\", \"Email\", \"Password\", \"Wallet\", \"Role\") VALUES ($1, $2, $3, $4, $5, $6)", tableName)
 	_, err = db.Exec(query, u.Id, u.Name, u.Email, u.Password, u.Wallet, u.Role)
 	if err != nil {
 		return nil, err
@@ -140,7 +142,7 @@ func (service UserService) UpdateUser(u *types.UpdateUserDto) (*types.UserDto, e
 
 	userDto, err := service.GetUserById(u.Id)
 	if err != nil {
-		return userDto, err
+		return nil, err
 	}
 	return userDto, nil
 }
@@ -152,7 +154,7 @@ func (service UserService) DeleteUser(id string) error {
 	}
 	defer db.Close()
 
-	query := "DELETE FROM public.\"Users\" WHERE \"Id\" = $1"
+	query := fmt.Sprintf("DELETE FROM %s WHERE \"Id\" = $1", tableName)
 	_, err = db.Exec(query, id)
 	if err != nil {
 		return err
@@ -167,7 +169,7 @@ func (service UserService) WalletReplenishment(id string, money int) (*types.Use
 	}
 	defer db.Close()
 
-	getQuery := "SELECT * FROM public.\"Users\" WHERE \"Id\" = $1"
+	getQuery := fmt.Sprintf("SELECT * FROM %s WHERE \"Id\" = $1", tableName)
 	rows, err := db.Query(getQuery, id)
 	if err != nil {
 		return nil, err
@@ -182,7 +184,7 @@ func (service UserService) WalletReplenishment(id string, money int) (*types.Use
 		}
 	}
 
-	query := "UPDATE public.\"Users\" SET \"Wallet\" = $1"
+	query := fmt.Sprintf("UPDATE %s SET \"Wallet\" = $1", tableName)
 	_, err = db.Exec(query, u.Wallet+money)
 	if err != nil {
 		return nil, err
@@ -202,7 +204,7 @@ func (service UserService) SpendMoney(id string, money int) (*types.UserDto, err
 	}
 	defer db.Close()
 
-	getQuery := "SELECT * FROM public.\"Users\" WHERE \"Id\" = $1"
+	getQuery := fmt.Sprintf("SELECT * FROM %s WHERE \"Id\" = $1", tableName)
 	rows, err := db.Query(getQuery, id)
 	if err != nil {
 		return nil, err
@@ -217,7 +219,7 @@ func (service UserService) SpendMoney(id string, money int) (*types.UserDto, err
 		}
 	}
 
-	query := "UPDATE public.\"Users\" SET \"Wallet\" = $1"
+	query := fmt.Sprintf("UPDATE %s SET \"Wallet\" = $1", tableName)
 	_, err = db.Exec(query, u.Wallet-money)
 	if err != nil {
 		return nil, err
