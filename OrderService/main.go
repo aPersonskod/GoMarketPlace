@@ -1,12 +1,13 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"order_service/configs"
 	"order_service/middleware"
 	"order_service/services"
-	"strconv"
+	"order_service/types"
 
 	docs "order_service/docs"
 
@@ -15,23 +16,40 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-var cartService services.ICartService
-var orderService services.IOrderService
 var placeService services.IPlaceService
+var orderService services.IOrderService
+var cartService services.ICartService
 var userService services.IUserService
 
 func getConnStr(dbUser, dbPassword, dbName string) string {
 	return fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", dbUser, dbPassword, dbName)
 }
 
-func main() {
-	/* 	userService = services.UserService{} // TODO fix services
-	   	cartService = services.CartService{
-	   		ConnStr: getConnStr(configs.Env.DbUser, configs.Env.DbPassword, configs.Env.DbName),
-	   		OrderService: nil,
-	   		UserService: nil,
-	   	} */
+func initServices(ctx *gin.Context) error {
+	authHeader, err := getAuthHeader(ctx)
+	if err != nil {
+		return err
+	}
+	userService = services.UserService{AuthHeader: authHeader}
 	placeService = services.PlaceService{ConnStr: getConnStr(configs.Env.DbUser, configs.Env.DbPassword, configs.Env.DbName)}
+	orderService = services.OrderService{ConnStr: getConnStr(configs.Env.DbUser, configs.Env.DbPassword, configs.Env.DbName)}
+	cartService = services.CartService{
+		ConnStr:      getConnStr(configs.Env.DbUser, configs.Env.DbPassword, configs.Env.DbName),
+		OrderService: orderService,
+		UserService:  userService,
+	}
+	return nil
+}
+
+func getAuthHeader(ctx *gin.Context) (string, error) {
+	authHeader := ctx.GetHeader("Authorization")
+	if authHeader == "" {
+		return "", errors.New("Auth header required")
+	}
+	return authHeader, nil
+}
+
+func main() {
 	r := gin.Default()
 
 	r.GET("/ping", func(ctx *gin.Context) {
@@ -48,13 +66,13 @@ func main() {
 			gr.GET("/get-places", GetPlaces)
 			gr.GET("/get-place/:id", GetPlace)
 
-			gr.POST("/mark-cart-as-bought", MarkCartAsBought)
-
-			gr.GET("/get-cart-orders", GetCartOrders)
+			gr.GET("/get-cart-orders/:id", GetCartOrders)
 			//with auth
 			wa := gr.Use(middleware.JwtAuthMiddleware())
 			wa.GET("/get-cart", GetCart)
+			wa.GET("/get-bought-carts", GetBoughtCarts)
 			wa.POST("/confirm-cart", ConfirmCart)
+			wa.POST("/mark-cart-as-bought", MarkCartAsBought)
 
 			wa.PUT("/add-order", AddOrder)
 			wa.DELETE("/delete-order/:id", DeleteOrder)
@@ -77,6 +95,7 @@ var connStr string = fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable"
 // @Success 200 {string} s
 // @Router /order-service/get-places [get]
 func GetPlaces(ctx *gin.Context) {
+	initServices(ctx)
 	places, err := placeService.GetPlaces()
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -94,6 +113,7 @@ func GetPlaces(ctx *gin.Context) {
 // @Success 200 {string} idk_WTF
 // @Router /order-service/get-place/{id} [get]
 func GetPlace(ctx *gin.Context) {
+	initServices(ctx)
 	id := ctx.Param("id")
 	place, err := placeService.GetPlace(id)
 	if err != nil {
@@ -111,13 +131,32 @@ func GetPlace(ctx *gin.Context) {
 // @Success 200 {string} idk_WTF
 // @Router /order-service/get-cart [get]
 func GetCart(ctx *gin.Context) {
-	id, _ := ctx.Get("id") // protected data
-	cart, err := cartService.GetCart(fmt.Sprint(id))
+	initServices(ctx)
+	userId, _ := ctx.Get("id") // protected data
+	cart, err := cartService.GetCart(fmt.Sprint(userId))
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, cart)
+}
+
+// @BasePath /api
+// @Description description of function that get bought carts to auth user
+// @Tags order-service/cart
+// @Accept json
+// @Produce json
+// @Success 200 {string} idk_WTF
+// @Router /order-service/get-bought-carts [get]
+func GetBoughtCarts(ctx *gin.Context) {
+	initServices(ctx)
+	userId, _ := ctx.Get("id") // protected data
+	carts, err := cartService.GetBoughtCarts(fmt.Sprint(userId))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, carts)
 }
 
 /* // @BasePath /api
@@ -146,9 +185,10 @@ func GetCartById(ctx *gin.Context) {
 // @Success 200 {string} Ok
 // @Router /order-service/confirm-cart [POST]
 func ConfirmCart(ctx *gin.Context) {
+	initServices(ctx)
 	userId, _ := ctx.Get("id") // protected data
 	placeId := ctx.Query("placeId")
-	cart, err := cartService.ConfirmCart(placeId, fmt.Sprint(userId))
+	cart, err := cartService.ConfirmAndBuyCart(placeId, fmt.Sprint(userId))
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -160,12 +200,13 @@ func ConfirmCart(ctx *gin.Context) {
 // @Description confirm cart
 // @Tags order-service/cart
 // @Accept json
-// @Param   placeId	query	string	false	"Place id"
+// @Param   cartId	query	string	false	"Cart id"
 // @Success 200 {string} Ok
 // @Router /order-service/mark-cart-as-bought [POST]
 func MarkCartAsBought(ctx *gin.Context) {
-	placeId := ctx.Query("placeId")
-	err := cartService.MarkCartAsBought(placeId)
+	initServices(ctx)
+	cartId := ctx.Query("cartId")
+	err := cartService.MarkCartAsBought(cartId)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -184,6 +225,7 @@ func MarkCartAsBought(ctx *gin.Context) {
 // @Success 200 {string} s
 // @Router /order-service/get-cart-orders/{id} [get]
 func GetCartOrders(ctx *gin.Context) {
+	initServices(ctx)
 	cartId := ctx.Param("id")
 	orders, err := orderService.GetOrders(cartId)
 	if err != nil {
@@ -198,20 +240,17 @@ func GetCartOrders(ctx *gin.Context) {
 // @Tags order-service
 // @Accept json
 // @Produce json
-// @Param   productId	query	string	false	"Product id"
-// @Param   cartId	query	string	false	"Cart id"
-// @Param   quantity	query	int	false	"Quantity"
+// @Param order	body	types.OrderDto	true	"Order data"
 // @Success 200 {string} Ok
 // @Router /order-service/add-order [PUT]
 func AddOrder(ctx *gin.Context) {
-	productId := ctx.Query("productId")
-	cartId := ctx.Query("cartId")
-	quantity, err := strconv.Atoi(ctx.Query("quantity"))
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	initServices(ctx)
+	orderDto := types.OrderDto{}
+	if err := ctx.ShouldBindJSON(&orderDto); err != nil {
+		ctx.JSON(http.StatusBadRequest, err)
 		return
 	}
-	order, err := orderService.AddOrder(productId, cartId, quantity)
+	order, err := orderService.AddOrder(orderDto)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -228,6 +267,7 @@ func AddOrder(ctx *gin.Context) {
 // @Success 200 {string} idk_WTF
 // @Router /order-service/delete-order/{id} [DELETE]
 func DeleteOrder(ctx *gin.Context) {
+	initServices(ctx)
 	productId := ctx.Param("id")
 	err := orderService.DeleteOrder(productId)
 	if err != nil {

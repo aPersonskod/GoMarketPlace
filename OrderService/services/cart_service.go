@@ -12,7 +12,8 @@ import (
 
 type ICartService interface {
 	GetCart(userId string) (*types.Cart, error)
-	ConfirmCart(placeId string, userId string) (*types.Cart, error)
+	GetBoughtCarts(userId string) ([]types.Cart, error)
+	ConfirmAndBuyCart(placeId string, userId string) (*types.Cart, error)
 	MarkCartAsBought(cartid string) error
 }
 
@@ -57,6 +58,34 @@ func (s CartService) GetCart(userId string) (*types.Cart, error) {
 	}
 	return &c, nil
 }
+
+func (s CartService) GetBoughtCarts(userId string) ([]types.Cart, error) {
+	db, err := sql.Open("postgres", s.ConnStr)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	query := fmt.Sprintf("SELECT * FROM %s WHERE \"UserId\" = $1 AND \"IsBought\" = 'true'", s.tableName())
+	rows, err := db.Query(query, userId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	carts := []types.Cart{}
+	for rows.Next() {
+		c := types.Cart{}
+		err = rows.Scan(&c.Id, &c.UserId, &c.PlaceId, &c.AmountToPay, &c.IsConfirmed, &c.IsBought)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		carts = append(carts, c)
+	}
+	return carts, nil
+}
+
 func (s CartService) ConfirmAndBuyCart(placeId string, userId string) (*types.Cart, error) {
 	cart, err := s.GetCart(userId)
 	if err != nil {

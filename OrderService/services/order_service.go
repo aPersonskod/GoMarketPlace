@@ -10,9 +10,9 @@ import (
 )
 
 type IOrderService interface {
-	GetOrders(cartId string) ([]types.Order, error)                               // TODO need to get from redis db
-	AddOrder(productId string, cartId string, quantity int) (*types.Order, error) // TODO need to get from redis db
-	DeleteOrder(productId string) error                                           // TODO need to get from redis db
+	GetOrders(cartId string) ([]types.Order, error)         // TODO need to get from redis db
+	AddOrder(orderDto types.OrderDto) (*types.Order, error) // TODO need to get from redis db
+	DeleteOrder(productId string) error                     // TODO need to get from redis db
 }
 
 type OrderService struct {
@@ -50,7 +50,7 @@ func (s OrderService) GetOrders(cartId string) ([]types.Order, error) {
 	return orders, nil
 }
 
-func (s OrderService) AddOrder(productId string, cartId string, quantity int) (*types.Order, error) {
+func (s OrderService) AddOrder(orderDto types.OrderDto) (*types.Order, error) {
 	db, err := sql.Open("postgres", s.ConnStr)
 	if err != nil {
 		return nil, err
@@ -59,15 +59,15 @@ func (s OrderService) AddOrder(productId string, cartId string, quantity int) (*
 
 	newId := fmt.Sprintf("%s", uuid.New())
 	query := fmt.Sprintf("INSERT INTO %s (\"Id\", \"CartId\", \"OrderedProductId\", \"Quantity\") VALUES ($1, $2, $3, $4)", s.tableName())
-	_, err = db.Exec(query, newId, cartId, productId, quantity)
+	_, err = db.Exec(query, newId, orderDto.CartId, orderDto.OrderedProductId, orderDto.Quantity)
 	if err != nil {
 		return nil, err
 	}
 	o := types.Order{
 		Id:               newId,
-		CartId:           cartId,
-		OrderedProductId: productId,
-		Quantity:         quantity,
+		CartId:           orderDto.CartId,
+		OrderedProductId: orderDto.OrderedProductId,
+		Quantity:         orderDto.Quantity,
 	}
 	return &o, nil
 }

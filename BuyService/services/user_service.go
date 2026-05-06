@@ -1,24 +1,25 @@
 package services
 
 import (
+	"buy_service/configs"
+	"buy_service/types"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
-	"order_service/types"
 )
 
 type IUserService interface {
-	GetUser() (*types.UserDto, error)
+	SpendMoney(id string, money int) (*types.UserDto, error)
 }
 
 type UserService struct {
 	AuthHeader string
 }
 
-func (s UserService) GetUser() (*types.UserDto, error) {
+func (s UserService) SpendMoney(id string, money int) (*types.UserDto, error) {
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", "http://localhost:8080/api/user-service/", nil) // TODO add to env
+	url := fmt.Sprintf("%s/api/user-service/spend-money?money=%d", configs.Env.UserServiceAddressDev, money)
+	req, err := http.NewRequest("POST", url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -39,5 +40,5 @@ func (s UserService) GetUser() (*types.UserDto, error) {
 		}
 		return &userDto, nil
 	}
-	return nil, errors.New("Bad request")
+	return nil, fmt.Errorf("Error, status code: %d", resp.StatusCode)
 }

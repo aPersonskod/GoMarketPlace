@@ -19,3 +19,9 @@ type Order struct {
 	OrderedProductId string `json:"orderedProductId"`
 	Quantity         int    `json:"quantity"`
 }
+
+type OrderDto struct {
+	CartId           string `json:"cartId"`
+	OrderedProductId string `json:"orderedProductId"`
+	Quantity         int    `json:"quantity"`
+}
