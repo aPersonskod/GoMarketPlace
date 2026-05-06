@@ -36,6 +36,25 @@ info:
   contact: {}
 paths:
   /user-service/:
+    delete:
+      consumes:
+      - application/json
+      description: delete user
+      parameters:
+      - description: Some ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      tags:
+      - user-service
     get:
       consumes:
       - application/json
@@ -89,26 +108,6 @@ paths:
             type: string
       tags:
       - user-service
-  /user-service/{id}:
-    delete:
-      consumes:
-      - application/json
-      description: delete user
-      parameters:
-      - description: Some ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            type: string
-      tags:
-      - user-service
   /user-service/get-all:
     get:
       consumes:
@@ -151,10 +150,6 @@ paths:
       - application/json
       description: spend money
       parameters:
-      - description: Some ID
-        in: query
-        name: id
-        type: string
       - description: Some money
         in: query
         name: money
@@ -187,10 +182,6 @@ paths:
       - application/json
       description: add money
       parameters:
-      - description: Some ID
-        in: query
-        name: id
-        type: string
       - description: Some money
         in: query
         name: money

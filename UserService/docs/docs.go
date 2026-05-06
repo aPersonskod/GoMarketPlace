@@ -67,6 +67,35 @@ const docTemplate = `{
                     }
                 }
             },
+            "delete": {
+                "description": "delete user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user-service"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Some ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
             "patch": {
                 "description": "update user",
                 "consumes": [
@@ -166,12 +195,6 @@ const docTemplate = `{
                 ],
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "Some ID",
-                        "name": "id",
-                        "in": "query"
-                    },
-                    {
                         "type": "integer",
                         "description": "Some money",
                         "name": "money",
@@ -222,47 +245,10 @@ const docTemplate = `{
                 ],
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "Some ID",
-                        "name": "id",
-                        "in": "query"
-                    },
-                    {
                         "type": "integer",
                         "description": "Some money",
                         "name": "money",
                         "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "/user-service/{id}": {
-            "delete": {
-                "description": "delete user",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "user-service"
-                ],
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Some ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
                     }
                 ],
                 "responses": {

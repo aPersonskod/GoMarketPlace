@@ -3,5 +3,115 @@
     "info": {
         "contact": {}
     },
-    "paths": {}
+    "paths": {
+        "/buy-service/get-report-by-id/{id}": {
+            "get": {
+                "description": "description of function that get report by id",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "buy-service"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Report ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/buy-service/get-report-by-userid": {
+            "get": {
+                "description": "description of function that get reports by user's id",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "buy-service"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "buy cart",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "buy-service"
+                ],
+                "parameters": [
+                    {
+                        "description": "Cart data",
+                        "name": "cart",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.Cart"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "types.Cart": {
+            "type": "object",
+            "properties": {
+                "amountToPay": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "isBought": {
+                    "type": "string"
+                },
+                "isConfirmed": {
+                    "type": "string"
+                },
+                "placeId": {
+                    "type": "string"
+                },
+                "userId": {
+                    "type": "string"
+                }
+            }
+        }
+    }
 }

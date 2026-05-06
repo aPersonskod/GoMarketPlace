@@ -1,4 +1,74 @@
+definitions:
+  types.Cart:
+    properties:
+      amountToPay:
+        type: integer
+      id:
+        type: string
+      isBought:
+        type: string
+      isConfirmed:
+        type: string
+      placeId:
+        type: string
+      userId:
+        type: string
+    type: object
 info:
   contact: {}
-paths: {}
+paths:
+  /buy-service/get-report-by-id/{id}:
+    get:
+      consumes:
+      - application/json
+      description: description of function that get report by id
+      parameters:
+      - description: Report ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      tags:
+      - buy-service
+  /buy-service/get-report-by-userid:
+    get:
+      consumes:
+      - application/json
+      description: description of function that get reports by user's id
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      tags:
+      - buy-service
+    post:
+      consumes:
+      - application/json
+      description: buy cart
+      parameters:
+      - description: Cart data
+        in: body
+        name: cart
+        required: true
+        schema:
+          $ref: '#/definitions/types.Cart'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      tags:
+      - buy-service
 swagger: "2.0"
