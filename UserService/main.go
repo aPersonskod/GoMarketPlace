@@ -11,6 +11,7 @@ import (
 
 	docs "user_service/docs"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 	swaggerfiles "github.com/swaggo/files"
@@ -25,6 +26,8 @@ var Service services.IUserService
 func main() {
 	Service = services.UserService{ConnStr: connStr}
 	r := gin.Default()
+	// Use Default() for basic "allow all origins"
+	r.Use(cors.Default())
 
 	r.GET("/ping", func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{

@@ -8,6 +8,7 @@ import (
 	docs "product_service/docs"
 	"product_service/middleware"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	swaggerfiles "github.com/swaggo/files"
@@ -18,6 +19,8 @@ import (
 
 func main() {
 	r := gin.Default()
+	// Use Default() for basic "allow all origins"
+	r.Use(cors.Default())
 
 	r.GET("/ping", func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{

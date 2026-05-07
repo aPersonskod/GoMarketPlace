@@ -17,6 +17,27 @@ definitions:
 info:
   contact: {}
 paths:
+  /buy-service/buy-cart:
+    post:
+      consumes:
+      - application/json
+      description: buy cart
+      parameters:
+      - description: Cart data
+        in: body
+        name: cart
+        required: true
+        schema:
+          $ref: '#/definitions/types.Cart'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      tags:
+      - buy-service
   /buy-service/get-report-by-id/{id}:
     get:
       consumes:
@@ -42,26 +63,6 @@ paths:
       consumes:
       - application/json
       description: description of function that get reports by user's id
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            type: string
-      tags:
-      - buy-service
-    post:
-      consumes:
-      - application/json
-      description: buy cart
-      parameters:
-      - description: Cart data
-        in: body
-        name: cart
-        required: true
-        schema:
-          $ref: '#/definitions/types.Cart'
       produces:
       - application/json
       responses:

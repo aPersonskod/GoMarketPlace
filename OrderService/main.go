@@ -11,6 +11,7 @@ import (
 
 	docs "order_service/docs"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	swaggerfiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -51,6 +52,8 @@ func getAuthHeader(ctx *gin.Context) (string, error) {
 
 func main() {
 	r := gin.Default()
+	// Use Default() for basic "allow all origins"
+	r.Use(cors.Default())
 
 	r.GET("/ping", func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{

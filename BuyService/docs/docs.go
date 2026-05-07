@@ -15,6 +15,39 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/buy-service/buy-cart": {
+            "post": {
+                "description": "buy cart",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "buy-service"
+                ],
+                "parameters": [
+                    {
+                        "description": "Cart data",
+                        "name": "cart",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.Cart"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/buy-service/get-report-by-id/{id}": {
             "get": {
                 "description": "description of function that get report by id",
@@ -57,37 +90,6 @@ const docTemplate = `{
                 ],
                 "tags": [
                     "buy-service"
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "description": "buy cart",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "buy-service"
-                ],
-                "parameters": [
-                    {
-                        "description": "Cart data",
-                        "name": "cart",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/types.Cart"
-                        }
-                    }
                 ],
                 "responses": {
                     "200": {

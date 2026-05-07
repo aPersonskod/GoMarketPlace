@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/gin-contrib/cors"
+
 	docs "buy_service/docs"
 
 	"github.com/gin-gonic/gin"
@@ -50,6 +52,8 @@ func initServices(ctx *gin.Context) error {
 
 func main() {
 	r := gin.Default()
+	// Use Default() for basic "allow all origins"
+	r.Use(cors.Default())
 
 	r.GET("/ping", func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{
@@ -119,7 +123,7 @@ func GetReportByUserId(ctx *gin.Context) {
 // @Produce json
 // @Param cart	body	types.Cart	true	"Cart data"
 // @Success 200 {string} Ok
-// @Router /buy-service/get-report-by-userid [POST]
+// @Router /buy-service/buy-cart [POST]
 func BuyCart(ctx *gin.Context) {
 	initServices(ctx)
 	cart := types.Cart{}
