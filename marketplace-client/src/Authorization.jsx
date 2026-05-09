@@ -84,7 +84,7 @@ const Authorization = ({
             });
             if (!response.ok) {
                 let localError = await response.json();
-                alert(localError.message);
+                alert(localError.error);
                 return;
             }
             const result = await response.json();

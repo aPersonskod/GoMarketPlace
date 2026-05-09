@@ -16,7 +16,7 @@ type IOrderService interface {
 }
 
 type OrderService struct {
-	ConnStr string
+	DB *sql.DB
 }
 
 func (s OrderService) tableName() string {
@@ -24,14 +24,8 @@ func (s OrderService) tableName() string {
 }
 
 func (s OrderService) GetOrders(cartId string) ([]types.Order, error) {
-	db, err := sql.Open("postgres", s.ConnStr)
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-
 	query := fmt.Sprintf("SELECT * FROM %s WHERE \"CartId\" = $1 AND \"Quantity\" > 0", s.tableName())
-	rows, err := db.Query(query, cartId)
+	rows, err := s.DB.Query(query, cartId)
 	if err != nil {
 		return nil, err
 	}
@@ -51,14 +45,8 @@ func (s OrderService) GetOrders(cartId string) ([]types.Order, error) {
 }
 
 func (s OrderService) AddOrder(orderDto types.OrderDto, cartService ICartService, productService IProductService) (*types.Order, error) {
-	db, err := sql.Open("postgres", s.ConnStr)
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-
 	query := fmt.Sprintf("SELECT * FROM %s WHERE \"CartId\" = $1 AND \"OrderedProductId\" = $2", s.tableName())
-	rows, err := db.Query(query, orderDto.CartId, orderDto.OrderedProductId)
+	rows, err := s.DB.Query(query, orderDto.CartId, orderDto.OrderedProductId)
 	if err != nil {
 		return nil, err
 	}
@@ -108,15 +96,9 @@ func (s OrderService) updateAmountToPay(order *types.Order, cartService ICartSer
 }
 
 func (s OrderService) createOrder(orderDto types.OrderDto) (*types.Order, error) {
-	db, err := sql.Open("postgres", s.ConnStr)
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-
 	newId := fmt.Sprintf("%s", uuid.New())
 	query := fmt.Sprintf("INSERT INTO %s (\"Id\", \"CartId\", \"OrderedProductId\", \"Quantity\") VALUES ($1, $2, $3, $4)", s.tableName())
-	_, err = db.Exec(query, newId, orderDto.CartId, orderDto.OrderedProductId, orderDto.Quantity)
+	_, err := s.DB.Exec(query, newId, orderDto.CartId, orderDto.OrderedProductId, orderDto.Quantity)
 	if err != nil {
 		return nil, err
 	}
@@ -130,14 +112,8 @@ func (s OrderService) createOrder(orderDto types.OrderDto) (*types.Order, error)
 }
 
 func (s OrderService) appendOrder(orderDto types.OrderDto, orderId string) (*types.Order, error) {
-	db, err := sql.Open("postgres", s.ConnStr)
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-
 	query := fmt.Sprintf("UPDATE %s SET \"Quantity\" = $1 WHERE \"OrderedProductId\" = $2", s.tableName())
-	_, err = db.Exec(query, orderDto.Quantity, orderDto.OrderedProductId)
+	_, err := s.DB.Exec(query, orderDto.Quantity, orderDto.OrderedProductId)
 	if err != nil {
 		return nil, err
 	}
@@ -167,14 +143,8 @@ func (s OrderService) getAmountToPay(cartId string, productService IProductServi
 }
 
 func (s OrderService) DeleteOrder(productId string) error {
-	db, err := sql.Open("postgres", s.ConnStr)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
 	query := fmt.Sprintf("DELETE FROM %s WHERE \"OrderedProductId\" = $1", s.tableName())
-	_, err = db.Exec(query, productId)
+	_, err := s.DB.Exec(query, productId)
 	if err != nil {
 		return err
 	}

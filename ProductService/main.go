@@ -17,6 +17,14 @@ import (
 	"gorm.io/gorm"
 )
 
+type MainStore struct {
+	DB *gorm.DB
+}
+
+func getConnStr(dbUser, dbPassword, dbName string) string {
+	return fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", dbUser, dbPassword, dbName)
+}
+
 func main() {
 	r := gin.Default()
 	// Use Default() for basic "allow all origins"
@@ -27,6 +35,12 @@ func main() {
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 	}))
+
+	db, err := gorm.Open(postgres.Open(getConnStr(configs.Env.DbUser, configs.Env.DbPassword, configs.Env.DbName)), &gorm.Config{})
+	if err != nil {
+		panic(err.Error())
+	}
+	s := MainStore{DB: db}
 
 	r.GET("/ping", func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{
@@ -39,21 +53,18 @@ func main() {
 	{
 		gr := v1.Group("/product-service")
 		{
-			gr.GET("/get-all", GetAll)
-			gr.GET("/:id", GetById)
+			gr.GET("/get-all", s.GetAll)
+			gr.GET("/:id", s.GetById)
 			//with auth
 			wa := gr.Use(middleware.JwtAuthMiddleware())
-			wa.PUT("/", AddProduct)
-			wa.PATCH("/", UpdateProduct)
-			wa.DELETE("/:id", DeleteProduct)
+			wa.PUT("/", s.AddProduct)
+			wa.PATCH("/", s.UpdateProduct)
+			wa.DELETE("/:id", s.DeleteProduct)
 		}
 	}
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
 	r.Run(fmt.Sprintf(":%s", configs.Env.Port))
 }
-
-var connStr string = fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable",
-	configs.Env.DbUser, configs.Env.DbPassword, configs.Env.DbName)
 
 type Product struct {
 	Id   string `gorm:"column:Id" json:"id"`
@@ -74,15 +85,9 @@ func (Product) TableName() string {
 // @Produce json
 // @Success 200 {string} idk_WTF
 // @Router /product-service/get-all [get]
-func GetAll(ctx *gin.Context) {
-	db, err := gorm.Open(postgres.Open(connStr), &gorm.Config{})
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "failed to connect database"})
-		return
-	}
-
+func (s *MainStore) GetAll(ctx *gin.Context) {
 	var products []Product
-	db.Find(&products)
+	s.DB.Find(&products)
 	ctx.JSON(http.StatusOK, products)
 }
 
@@ -94,16 +99,11 @@ func GetAll(ctx *gin.Context) {
 // @Param   id	path	string		true	"Some ID"
 // @Success 200 {string} idk_WTF
 // @Router /product-service/{id} [get]
-func GetById(ctx *gin.Context) {
+func (s *MainStore) GetById(ctx *gin.Context) {
 	id := ctx.Param("id")
-	db, err := gorm.Open(postgres.Open(connStr), &gorm.Config{})
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "failed to connect database"})
-		return
-	}
 
 	var product Product
-	db.First(&product, `"Id" = ?`, id)
+	s.DB.First(&product, `"Id" = ?`, id)
 	ctx.JSON(http.StatusOK, product)
 }
 
@@ -115,7 +115,7 @@ func GetById(ctx *gin.Context) {
 // @Param product	body	Product	true	"Product data"
 // @Success 200 {string} idk_WTF
 // @Router /product-service/ [PUT]
-func AddProduct(ctx *gin.Context) {
+func (s *MainStore) AddProduct(ctx *gin.Context) {
 	role, _ := ctx.Get("role")
 	if role != middleware.AdminRole {
 		ctx.JSON(http.StatusForbidden, gin.H{"error": "You don't have sufficient permissions"})
@@ -127,18 +127,13 @@ func AddProduct(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	db, err := gorm.Open(postgres.Open(connStr), &gorm.Config{})
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "failed to connect database"})
-		return
-	}
 	newId := fmt.Sprint(uuid.New())
 	newProduct := &Product{
 		Id:   newId,
 		Name: product.Name,
 		Cost: product.Cost,
 	}
-	err = gorm.G[Product](db).Create(ctx, newProduct)
+	err := gorm.G[Product](s.DB).Create(ctx, newProduct)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -154,7 +149,7 @@ func AddProduct(ctx *gin.Context) {
 // @Param product	body	Product	true	"Product data"
 // @Success 200 {string} idk_WTF
 // @Router /product-service/ [PATCH]
-func UpdateProduct(ctx *gin.Context) {
+func (s *MainStore) UpdateProduct(ctx *gin.Context) {
 	role, _ := ctx.Get("role")
 	if role != middleware.AdminRole {
 		ctx.JSON(http.StatusForbidden, gin.H{"error": "You don't have sufficient permissions"})
@@ -166,12 +161,7 @@ func UpdateProduct(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	db, err := gorm.Open(postgres.Open(connStr), &gorm.Config{})
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "failed to connect database"})
-		return
-	}
-	_, err = gorm.G[Product](db).Where(`"Id" = ?`, product.Id).Updates(ctx, product)
+	_, err := gorm.G[Product](s.DB).Where(`"Id" = ?`, product.Id).Updates(ctx, product)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -187,7 +177,7 @@ func UpdateProduct(ctx *gin.Context) {
 // @Param   id	path	string		true	"Some ID"
 // @Success 200 {string} idk_WTF
 // @Router /product-service/{id} [DELETE]
-func DeleteProduct(ctx *gin.Context) {
+func (s *MainStore) DeleteProduct(ctx *gin.Context) {
 	role, _ := ctx.Get("role")
 	if role != middleware.AdminRole {
 		ctx.JSON(http.StatusForbidden, gin.H{"error": "You don't have sufficient permissions"})
@@ -195,12 +185,7 @@ func DeleteProduct(ctx *gin.Context) {
 	}
 
 	id := ctx.Param("id")
-	db, err := gorm.Open(postgres.Open(connStr), &gorm.Config{})
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "failed to connect database"})
-		return
-	}
-	rowsAffected, err := gorm.G[Product](db).Where(`"Id" = ?`, id).Delete(ctx)
+	rowsAffected, err := gorm.G[Product](s.DB).Where(`"Id" = ?`, id).Delete(ctx)
 	if rowsAffected == 0 {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "product not found"})
 		return

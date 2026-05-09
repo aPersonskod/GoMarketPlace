@@ -15,21 +15,15 @@ type IPlaceService interface {
 }
 
 type PlaceService struct {
-	ConnStr string
+	DB *sql.DB
 }
 
 func (s PlaceService) tableName() string {
 	return "public.\"Places\""
 }
 
-func (service PlaceService) GetPlaces() ([]types.Place, error) {
-	db, err := sql.Open("postgres", service.ConnStr)
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-
-	rows, err := db.Query(fmt.Sprintf("SELECT * FROM %s", service.tableName()))
+func (s PlaceService) GetPlaces() ([]types.Place, error) {
+	rows, err := s.DB.Query(fmt.Sprintf("SELECT * FROM %s", s.tableName()))
 	if err != nil {
 		return nil, err
 	}
@@ -48,15 +42,9 @@ func (service PlaceService) GetPlaces() ([]types.Place, error) {
 	return places, nil
 }
 
-func (service PlaceService) GetPlace(placeId string) (*types.Place, error) {
-	db, err := sql.Open("postgres", service.ConnStr)
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-
-	query := fmt.Sprintf("SELECT * FROM %s WHERE \"Id\" = $1", service.tableName())
-	rows, err := db.Query(query, placeId)
+func (s PlaceService) GetPlace(placeId string) (*types.Place, error) {
+	query := fmt.Sprintf("SELECT * FROM %s WHERE \"Id\" = $1", s.tableName())
+	rows, err := s.DB.Query(query, placeId)
 	if err != nil {
 		return nil, err
 	}

@@ -19,7 +19,7 @@ type ICartService interface {
 }
 
 type CartService struct {
-	ConnStr string
+	DB *sql.DB
 }
 
 func (s CartService) tableName() string {
@@ -57,14 +57,8 @@ func (s CartService) GetBoughtCart(userId string) (*types.Cart, error) {
 }
 
 func (s CartService) getCartFromDB(userId string, isConfirmed bool) (*types.Cart, error) {
-	db, err := sql.Open("postgres", s.ConnStr)
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-
 	query := fmt.Sprintf("SELECT \"Id\", \"UserId\", \"PlaceId\", \"AmountToPay\", \"IsConfirmed\", \"IsBought\" FROM %s WHERE \"UserId\" = $1 AND \"IsConfirmed\" = $2 AND \"IsBought\" = 'false'", s.tableName())
-	rows, err := db.Query(query, userId, isConfirmed)
+	rows, err := s.DB.Query(query, userId, isConfirmed)
 	if err != nil {
 		return nil, err
 	}
@@ -82,14 +76,8 @@ func (s CartService) getCartFromDB(userId string, isConfirmed bool) (*types.Cart
 }
 
 func (s CartService) GetBoughtCarts(userId string) ([]types.Cart, error) {
-	db, err := sql.Open("postgres", s.ConnStr)
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-
 	query := fmt.Sprintf("SELECT * FROM %s WHERE \"UserId\" = $1 AND \"IsBought\" = 'true'", s.tableName())
-	rows, err := db.Query(query, userId)
+	rows, err := s.DB.Query(query, userId)
 	if err != nil {
 		return nil, err
 	}
@@ -139,14 +127,8 @@ func (s CartService) ConfirmAndBuyCart(placeId string, userId string, orderServi
 	return confirmedCart, nil
 }
 func (s CartService) MarkCartAsBought(cartid string) error {
-	db, err := sql.Open("postgres", s.ConnStr)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
 	query := fmt.Sprintf("UPDATE %s SET \"IsBought\" = $1 WHERE \"Id\" = $2", s.tableName())
-	_, err = db.Exec(query, true, cartid)
+	_, err := s.DB.Exec(query, true, cartid)
 	if err != nil {
 		return err
 	}
@@ -154,14 +136,8 @@ func (s CartService) MarkCartAsBought(cartid string) error {
 }
 
 func (s CartService) confirmCart(placeId, userId, cartId string) (*types.Cart, error) {
-	db, err := sql.Open("postgres", s.ConnStr)
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-
 	query := fmt.Sprintf("UPDATE %s SET \"PlaceId\" = $1 WHERE \"UserId\" = $2 AND \"Id\" = $3", s.tableName())
-	res, err := db.Exec(query, placeId, userId, cartId)
+	res, err := s.DB.Exec(query, placeId, userId, cartId)
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +151,7 @@ func (s CartService) confirmCart(placeId, userId, cartId string) (*types.Cart, e
 	}
 
 	confirmQuery := fmt.Sprintf("UPDATE %s SET \"IsConfirmed\" = $1 WHERE \"UserId\" = $2", s.tableName())
-	_, err = db.Exec(confirmQuery, true, userId)
+	_, err = s.DB.Exec(confirmQuery, true, userId)
 	if err != nil {
 		return nil, err
 	}
@@ -188,19 +164,13 @@ func (s CartService) confirmCart(placeId, userId, cartId string) (*types.Cart, e
 	return foundCart, nil
 }
 func (s CartService) addCart(userId string) (*types.Cart, error) {
-	db, err := sql.Open("postgres", s.ConnStr)
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-
 	newId := uuid.New()
 	c := types.Cart{
 		Id:     fmt.Sprintf("%s", newId),
 		UserId: userId,
 	}
 	query := fmt.Sprintf("INSERT INTO %s (\"Id\", \"UserId\") VALUES ($1, $2)", s.tableName())
-	_, err = db.Exec(query, c.Id, c.UserId)
+	_, err := s.DB.Exec(query, c.Id, c.UserId)
 	if err != nil {
 		return nil, err
 	}
@@ -208,14 +178,8 @@ func (s CartService) addCart(userId string) (*types.Cart, error) {
 }
 
 func (s CartService) UpdateAmountToPay(cartId string, amountToPay int) error {
-	db, err := sql.Open("postgres", s.ConnStr)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
 	query := fmt.Sprintf("UPDATE %s SET \"AmountToPay\" = $1 WHERE \"Id\" = $2", s.tableName())
-	_, err = db.Exec(query, amountToPay, cartId)
+	_, err := s.DB.Exec(query, amountToPay, cartId)
 	if err != nil {
 		return err
 	}
