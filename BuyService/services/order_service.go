@@ -9,17 +9,19 @@ import (
 )
 
 type IOrderService interface {
-	GetCart(userId string) (*types.Cart, error)
-	GetBoughtCarts(userId string) ([]types.Cart, error)
-	GetOrders(cartId string) ([]types.Order, error)
+	GetCart(userId string) (*types.CartDto, error)
+	GetBoughtCarts(userId string) ([]types.CartDto, error)
+	GetOrders(cartId string) ([]types.OrderDto, error)
 	MarkCartAsBought(cartid string) error
+	GetPlace(placeId string) (*types.PlaceDto, error)
+	GetProduct(productId string) (*types.ProductDto, error)
 }
 
 type OrderService struct {
 	AuthHeader string
 }
 
-func (s OrderService) GetCart(userId string) (*types.Cart, error) {
+func (s OrderService) GetCart(userId string) (*types.CartDto, error) {
 	client := &http.Client{}
 	url := fmt.Sprintf("%s/api/order-service/get-cart", configs.Env.OrderServiceAddressDev)
 	req, err := http.NewRequest("GET", url, nil)
@@ -36,7 +38,7 @@ func (s OrderService) GetCart(userId string) (*types.Cart, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusOK {
-		cart := types.Cart{}
+		cart := types.CartDto{}
 		err = json.NewDecoder(resp.Body).Decode(&cart)
 		if err != nil {
 			return nil, err
@@ -45,7 +47,7 @@ func (s OrderService) GetCart(userId string) (*types.Cart, error) {
 	}
 	return nil, fmt.Errorf("Error, status code: %d", resp.StatusCode)
 }
-func (s OrderService) GetBoughtCarts(userId string) ([]types.Cart, error) {
+func (s OrderService) GetBoughtCarts(userId string) ([]types.CartDto, error) {
 	client := &http.Client{}
 	url := fmt.Sprintf("%s/api/order-service/get-bought-carts", configs.Env.OrderServiceAddressDev)
 	req, err := http.NewRequest("GET", url, nil)
@@ -62,7 +64,7 @@ func (s OrderService) GetBoughtCarts(userId string) ([]types.Cart, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusOK {
-		carts := []types.Cart{}
+		carts := []types.CartDto{}
 		err = json.NewDecoder(resp.Body).Decode(&carts)
 		if err != nil {
 			return nil, err
@@ -71,7 +73,7 @@ func (s OrderService) GetBoughtCarts(userId string) ([]types.Cart, error) {
 	}
 	return nil, fmt.Errorf("Error, status code: %d", resp.StatusCode)
 }
-func (s OrderService) GetOrders(cartId string) ([]types.Order, error) {
+func (s OrderService) GetOrders(cartId string) ([]types.OrderDto, error) {
 	client := &http.Client{}
 	url := fmt.Sprintf("%s/api/order-service/get-cart-orders/%s", configs.Env.OrderServiceAddressDev, cartId)
 	req, err := http.NewRequest("GET", url, nil)
@@ -86,7 +88,7 @@ func (s OrderService) GetOrders(cartId string) ([]types.Order, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusOK {
-		orders := []types.Order{}
+		orders := []types.OrderDto{}
 		err = json.NewDecoder(resp.Body).Decode(&orders)
 		if err != nil {
 			return nil, err
@@ -115,4 +117,52 @@ func (s OrderService) MarkCartAsBought(cartid string) error {
 		return nil
 	}
 	return fmt.Errorf("Error, status code: %d", resp.StatusCode)
+}
+func (s OrderService) GetPlace(placeId string) (*types.PlaceDto, error) {
+	client := &http.Client{}
+	url := fmt.Sprintf("%s/api/order-service/get-place/%s", configs.Env.OrderServiceAddressDev, placeId)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("Error sending request: %s", err.Error())
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusOK {
+		place := types.PlaceDto{}
+		err = json.NewDecoder(resp.Body).Decode(&place)
+		if err != nil {
+			return nil, err
+		}
+		return &place, nil
+	}
+	return nil, fmt.Errorf("Error, status code: %d", resp.StatusCode)
+}
+func (s OrderService) GetProduct(productId string) (*types.ProductDto, error) {
+	client := &http.Client{}
+	url := fmt.Sprintf("%s/api/product-service/%s", configs.Env.ProductServiceAddressDev, productId)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("Error sending request: %s", err.Error())
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusOK {
+		product := types.ProductDto{}
+		err = json.NewDecoder(resp.Body).Decode(&product)
+		if err != nil {
+			return nil, err
+		}
+		return &product, nil
+	}
+	return nil, fmt.Errorf("Error, status code: %d", resp.StatusCode)
 }

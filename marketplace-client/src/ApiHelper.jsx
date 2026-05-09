@@ -13,12 +13,12 @@ export class ApiHelper {
     getUser = async () => {
         let token = this.getAccessToken();
         if (token === null) return null;
-        let url = `${this.userServiceBaseAddress}`;
+        let url = `${this.userServiceBaseAddress}/`;
         let options = {
             method: 'GET',
             headers: {
-                'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
             },
         };
 

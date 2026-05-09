@@ -20,7 +20,13 @@ import (
 func main() {
 	r := gin.Default()
 	// Use Default() for basic "allow all origins"
-	r.Use(cors.Default())
+	r.Use(cors.New(cors.Config{
+		AllowAllOrigins:  true,
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+	}))
 
 	r.GET("/ping", func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{
@@ -50,9 +56,9 @@ var connStr string = fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable"
 	configs.Env.DbUser, configs.Env.DbPassword, configs.Env.DbName)
 
 type Product struct {
-	Id   string `gorm:"column:Id"`
-	Name string `gorm:"column:Name"`
-	Cost int    `gorm:"column:Cost"`
+	Id   string `gorm:"column:Id" json:"id"`
+	Name string `gorm:"column:Name" json:"name"`
+	Cost int    `gorm:"column:Cost" json:"cost"`
 }
 
 func (Product) TableName() string {

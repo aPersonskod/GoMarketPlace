@@ -88,7 +88,7 @@ const Authorization = ({
                 return;
             }
             const result = await response.json();
-            let token = result.accessToken;
+            let token = result.token;
             localStorage.setItem('uToken', token);
             navigateNext();
         } catch (err) {

@@ -74,7 +74,6 @@ const ProductQuantitySelector = ({ productName, productCost, productId, setAmmou
             }
             const orders = await response.json();
             let currentQuantity = getInitialQuantity(productId, orders);
-            console.log(currentQuantity);
             setCounter(currentQuantity);
         } catch (err) {
             setError(err);

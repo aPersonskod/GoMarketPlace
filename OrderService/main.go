@@ -21,6 +21,8 @@ var placeService services.IPlaceService
 var orderService services.IOrderService
 var cartService services.ICartService
 var userService services.IUserService
+var productService services.IProductService
+var buyService services.BuyService
 
 func getConnStr(dbUser, dbPassword, dbName string) string {
 	return fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", dbUser, dbPassword, dbName)
@@ -32,13 +34,12 @@ func initServices(ctx *gin.Context) error {
 		return err
 	}
 	userService = services.UserService{AuthHeader: authHeader}
+	buyService = services.BuyService{AuthHeader: authHeader}
 	placeService = services.PlaceService{ConnStr: getConnStr(configs.Env.DbUser, configs.Env.DbPassword, configs.Env.DbName)}
 	orderService = services.OrderService{ConnStr: getConnStr(configs.Env.DbUser, configs.Env.DbPassword, configs.Env.DbName)}
-	cartService = services.CartService{
-		ConnStr:      getConnStr(configs.Env.DbUser, configs.Env.DbPassword, configs.Env.DbName),
-		OrderService: orderService,
-		UserService:  userService,
-	}
+	cartService = services.CartService{ConnStr: getConnStr(configs.Env.DbUser, configs.Env.DbPassword, configs.Env.DbName)}
+	productService = services.ProductService{}
+
 	return nil
 }
 
@@ -53,7 +54,13 @@ func getAuthHeader(ctx *gin.Context) (string, error) {
 func main() {
 	r := gin.Default()
 	// Use Default() for basic "allow all origins"
-	r.Use(cors.Default())
+	r.Use(cors.New(cors.Config{
+		AllowAllOrigins:  true,
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+	}))
 
 	r.GET("/ping", func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{
@@ -191,7 +198,7 @@ func ConfirmCart(ctx *gin.Context) {
 	initServices(ctx)
 	userId, _ := ctx.Get("id") // protected data
 	placeId := ctx.Query("placeId")
-	cart, err := cartService.ConfirmAndBuyCart(placeId, fmt.Sprint(userId))
+	cart, err := cartService.ConfirmAndBuyCart(placeId, fmt.Sprint(userId), orderService, userService, buyService)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -253,7 +260,7 @@ func AddOrder(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, err)
 		return
 	}
-	order, err := orderService.AddOrder(orderDto)
+	order, err := orderService.AddOrder(orderDto, cartService, productService)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

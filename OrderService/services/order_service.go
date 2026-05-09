@@ -10,9 +10,9 @@ import (
 )
 
 type IOrderService interface {
-	GetOrders(cartId string) ([]types.Order, error)         // TODO need to get from redis db
-	AddOrder(orderDto types.OrderDto) (*types.Order, error) // TODO need to get from redis db
-	DeleteOrder(productId string) error                     // TODO need to get from redis db
+	GetOrders(cartId string) ([]types.Order, error)                                                                   // TODO need to get from redis db
+	AddOrder(orderDto types.OrderDto, cartService ICartService, productService IProductService) (*types.Order, error) // TODO need to get from redis db
+	DeleteOrder(productId string) error                                                                               // TODO need to get from redis db
 }
 
 type OrderService struct {
@@ -50,7 +50,64 @@ func (s OrderService) GetOrders(cartId string) ([]types.Order, error) {
 	return orders, nil
 }
 
-func (s OrderService) AddOrder(orderDto types.OrderDto) (*types.Order, error) {
+func (s OrderService) AddOrder(orderDto types.OrderDto, cartService ICartService, productService IProductService) (*types.Order, error) {
+	db, err := sql.Open("postgres", s.ConnStr)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	query := fmt.Sprintf("SELECT * FROM %s WHERE \"CartId\" = $1 AND \"OrderedProductId\" = $2", s.tableName())
+	rows, err := db.Query(query, orderDto.CartId, orderDto.OrderedProductId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	o := types.Order{}
+	for rows.Next() {
+		err = rows.Scan(&o.Id, &o.CartId, &o.OrderedProductId, &o.Quantity)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+	}
+	if o.Id == "" {
+		createdOrder, err := s.createOrder(orderDto)
+		if err != nil {
+			return nil, err
+		}
+
+		err = s.updateAmountToPay(createdOrder, cartService, productService)
+		if err != nil {
+			return nil, err
+		}
+		return createdOrder, nil
+	}
+	addedOrder, err := s.appendOrder(orderDto, o.Id)
+	if err != nil {
+		return nil, err
+	}
+	err = s.updateAmountToPay(addedOrder, cartService, productService)
+	if err != nil {
+		return nil, err
+	}
+	return addedOrder, nil
+}
+
+func (s OrderService) updateAmountToPay(order *types.Order, cartService ICartService, productService IProductService) error {
+	amountToPay, err := s.getAmountToPay(order.CartId, productService)
+	if err != nil {
+		return err
+	}
+	err = cartService.UpdateAmountToPay(order.CartId, amountToPay)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s OrderService) createOrder(orderDto types.OrderDto) (*types.Order, error) {
 	db, err := sql.Open("postgres", s.ConnStr)
 	if err != nil {
 		return nil, err
@@ -71,6 +128,44 @@ func (s OrderService) AddOrder(orderDto types.OrderDto) (*types.Order, error) {
 	}
 	return &o, nil
 }
+
+func (s OrderService) appendOrder(orderDto types.OrderDto, orderId string) (*types.Order, error) {
+	db, err := sql.Open("postgres", s.ConnStr)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	query := fmt.Sprintf("UPDATE %s SET \"Quantity\" = $1 WHERE \"OrderedProductId\" = $2", s.tableName())
+	_, err = db.Exec(query, orderDto.Quantity, orderDto.OrderedProductId)
+	if err != nil {
+		return nil, err
+	}
+	o := types.Order{
+		Id:               orderId,
+		CartId:           orderDto.CartId,
+		OrderedProductId: orderDto.OrderedProductId,
+		Quantity:         orderDto.Quantity,
+	}
+	return &o, nil
+}
+
+func (s OrderService) getAmountToPay(cartId string, productService IProductService) (int, error) {
+	orders, err := s.GetOrders(cartId)
+	if err != nil {
+		return 0, err
+	}
+	amountToPay := 0
+	for _, order := range orders {
+		product, err := productService.GetProduct(order.OrderedProductId)
+		if err != nil {
+			continue
+		}
+		amountToPay += product.Cost * order.Quantity
+	}
+	return amountToPay, nil
+}
+
 func (s OrderService) DeleteOrder(productId string) error {
 	db, err := sql.Open("postgres", s.ConnStr)
 	if err != nil {
@@ -78,7 +173,7 @@ func (s OrderService) DeleteOrder(productId string) error {
 	}
 	defer db.Close()
 
-	query := fmt.Sprintf("DELETE FROM %s WHERE \"Id\" = $1", s.tableName())
+	query := fmt.Sprintf("DELETE FROM %s WHERE \"OrderedProductId\" = $1", s.tableName())
 	_, err = db.Exec(query, productId)
 	if err != nil {
 		return err

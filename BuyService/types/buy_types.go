@@ -9,14 +9,7 @@ type BuyReport struct {
 }
 
 type BuyReportDto struct {
-	Id       string    `json:"id"`
-	Cart     Cart      `json:"cart"`
-	SaleDate time.Time `json:"saleDate"`
-}
-
-type Order struct {
-	Id               string `json:"id"`
-	CartId           string `json:"cartId"`
-	OrderedProductId string `json:"orderedProductId"`
-	Quantity         int    `json:"quantity"`
+	Id       string     `json:"id"`
+	Cart     CartEntity `json:"cart"`
+	SaleDate time.Time  `json:"saleDate"`
 }

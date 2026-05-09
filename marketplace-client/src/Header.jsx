@@ -48,7 +48,7 @@ function Header() {
             let userDto = await apiHelper.getUser();
             if(userDto === null) navigate('/auth');
             let money = 300;
-            let query = `${apiHelper.userServiceBaseAddress}/WalletReplenishment?userId=${user.id}&money=${money}`;
+            let query = `${apiHelper.userServiceBaseAddress}/wallet-replenishment?money=${money}`;
             const response = await fetch(query, {
                 method: 'POST',
                 headers: {

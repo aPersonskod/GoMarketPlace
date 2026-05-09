@@ -55,7 +55,7 @@ const ConfirmationPage = () => {
 
             if (!response.ok) {
                 let myLocalError = await response.json();
-                throw new Error(`${myLocalError.message}`);
+                throw new Error(`${myLocalError.error}`);
                 //alert(`HTTP error! status: ${response.status}`);
             }
             let result = await response.json();

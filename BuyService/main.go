@@ -53,7 +53,13 @@ func initServices(ctx *gin.Context) error {
 func main() {
 	r := gin.Default()
 	// Use Default() for basic "allow all origins"
-	r.Use(cors.Default())
+	r.Use(cors.New(cors.Config{
+		AllowAllOrigins:  true,
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+	}))
 
 	r.GET("/ping", func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{
@@ -89,7 +95,7 @@ func GetReportById(ctx *gin.Context) {
 	reportId := ctx.Param("id")
 	userId, _ := ctx.Get("id") // protected data
 
-	reportDto, err := buy_service.GetReportById(reportId, fmt.Sprint(userId))
+	reportDto, err := buy_service.GetReportById(reportId, fmt.Sprint(userId), user_service, order_service)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -108,7 +114,7 @@ func GetReportByUserId(ctx *gin.Context) {
 	initServices(ctx)
 	userId, _ := ctx.Get("id") // protected data
 
-	reports, err := buy_service.GetReportsByUserId(fmt.Sprint(userId))
+	reports, err := buy_service.GetReportsByUserId(fmt.Sprint(userId), user_service, order_service)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -126,7 +132,7 @@ func GetReportByUserId(ctx *gin.Context) {
 // @Router /buy-service/buy-cart [POST]
 func BuyCart(ctx *gin.Context) {
 	initServices(ctx)
-	cart := types.Cart{}
+	cart := types.CartDto{}
 	if err := ctx.ShouldBindJSON(&cart); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

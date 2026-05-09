@@ -7,12 +7,13 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	_ "github.com/lib/pq"
 )
 
 type IBuyService interface {
-	GetReportById(reportId, userId string) (*types.BuyReportDto, error)
-	GetReportsByUserId(userId string) ([]types.BuyReport, error)
-	BuyCart(cart types.Cart) error
+	GetReportById(reportId, userId string, userService IUserService, orderService IOrderService) (*types.BuyReportDto, error)
+	GetReportsByUserId(userId string, userService IUserService, orderService IOrderService) ([]types.BuyReportDto, error)
+	BuyCart(cart types.CartDto) error
 }
 
 type BuyService struct {
@@ -25,7 +26,8 @@ func (s BuyService) tableName() string {
 	return "public.\"BuyReports\""
 }
 
-func (s BuyService) GetReportById(reportId, userId string) (*types.BuyReportDto, error) {
+// IT DOES NOT WORK, IDK WHY DO I NEED THIS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+func (s BuyService) GetReportById(reportId, userId string, userService IUserService, orderService IOrderService) (*types.BuyReportDto, error) {
 	db, err := sql.Open("postgres", s.ConnStr)
 	if err != nil {
 		return nil, err
@@ -47,14 +49,14 @@ func (s BuyService) GetReportById(reportId, userId string) (*types.BuyReportDto,
 			continue
 		}
 	}
-	reportDto, err := s.getBuyReportDto(r, userId)
+	reportDto, err := s.getBuyReportDto(r, types.CartDto{}, userService, orderService) // get error, do not use it !!!
 	if err != nil {
 		return nil, err
 	}
 	return reportDto, nil
 }
 
-func (s BuyService) getBuyReportByCart(cart *types.Cart) (*types.BuyReport, error) {
+func (s BuyService) getBuyReportByCart(cart *types.CartDto) (*types.BuyReport, error) {
 	db, err := sql.Open("postgres", s.ConnStr)
 	if err != nil {
 		return nil, err
@@ -79,12 +81,12 @@ func (s BuyService) getBuyReportByCart(cart *types.Cart) (*types.BuyReport, erro
 	return &r, nil
 }
 
-func (s BuyService) GetReportsByUserId(userId string) ([]types.BuyReport, error) {
+func (s BuyService) GetReportsByUserId(userId string, userService IUserService, orderService IOrderService) ([]types.BuyReportDto, error) {
 	boughtCarts, err := s.OrderService.GetBoughtCarts(userId)
 	if err != nil {
 		return nil, err
 	}
-	reports := []types.BuyReport{}
+	reports := []types.BuyReportDto{}
 	for _, boughtCart := range boughtCarts {
 		if boughtCart.PlaceId == "" {
 			continue
@@ -94,13 +96,17 @@ func (s BuyService) GetReportsByUserId(userId string) ([]types.BuyReport, error)
 			fmt.Println(err.Error())
 			continue
 		}
-		reports = append(reports, *r)
+		rDto, err := s.getBuyReportDto(*r, boughtCart, userService, orderService)
+		if err != nil {
+			return nil, err
+		}
+		reports = append(reports, *rDto)
 	}
 	return reports, nil
 }
 
 // TODO need to add SAGA
-func (s BuyService) BuyCart(cart types.Cart) error {
+func (s BuyService) BuyCart(cart types.CartDto) error {
 	if cart.PlaceId == "" {
 		return fmt.Errorf("Can't buy cart, place is required !!!")
 	}
@@ -155,11 +161,43 @@ func (s BuyService) addBuyReport(cartId string) error {
 	return nil
 }
 
-func (s BuyService) getBuyReportDto(buyReport types.BuyReport, userId string) (*types.BuyReportDto, error) {
-	cart, err := s.OrderService.GetCart(userId)
+func (s BuyService) getBuyReportDto(buyReport types.BuyReport, cart types.CartDto,
+	userService IUserService, orderService IOrderService) (*types.BuyReportDto, error) {
+	userDto, err := userService.GetUser()
 	if err != nil {
 		return nil, err
 	}
-	reportDto := types.BuyReportDto{Id: buyReport.Id, Cart: *cart, SaleDate: buyReport.SaleDate}
+	placeDto, err := orderService.GetPlace(cart.PlaceId)
+	if err != nil {
+		return nil, err
+	}
+	orders, err := orderService.GetOrders(cart.Id)
+	if err != nil {
+		return nil, err
+	}
+	orderDtos := []types.OrderEntity{}
+	for _, order := range orders {
+		productDto, err := orderService.GetProduct(order.OrderedProductId)
+		if err != nil {
+			return nil, err
+		}
+		orderDto := types.OrderEntity{
+			Id:             order.Id,
+			OrderedProduct: *productDto,
+			Quantity:       order.Quantity,
+		}
+		orderDtos = append(orderDtos, orderDto)
+	}
+
+	cartEntity := types.CartEntity{
+		Id:          cart.Id,
+		User:        *userDto,
+		Place:       *placeDto,
+		Orders:      orderDtos,
+		AmountToPay: cart.AmountToPay,
+		IsConfirmed: cart.IsConfirmed,
+		IsBought:    cart.IsBought,
+	}
+	reportDto := types.BuyReportDto{Id: buyReport.Id, Cart: cartEntity, SaleDate: buyReport.SaleDate}
 	return &reportDto, nil
 }

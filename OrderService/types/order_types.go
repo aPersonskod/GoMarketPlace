@@ -6,12 +6,12 @@ type Place struct {
 	WorkingTime string `json:"workingTime"`
 }
 type Cart struct {
-	Id          string `json:"id"`
-	UserId      string `json:"userId"`
-	PlaceId     string `json:"placeId"`
-	AmountToPay int    `json:"amountToPay"`
-	IsConfirmed string `json:"isConfirmed"`
-	IsBought    string `json:"isBought"`
+	Id          string  `json:"id"`
+	UserId      string  `json:"userId"`
+	PlaceId     *string `json:"placeId"`
+	AmountToPay int     `json:"amountToPay"`
+	IsConfirmed bool    `json:"isConfirmed"`
+	IsBought    bool    `json:"isBought"`
 }
 type Order struct {
 	Id               string `json:"id"`

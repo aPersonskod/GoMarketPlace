@@ -13,14 +13,13 @@ import (
 type ICartService interface {
 	GetCart(userId string) (*types.Cart, error)
 	GetBoughtCarts(userId string) ([]types.Cart, error)
-	ConfirmAndBuyCart(placeId string, userId string) (*types.Cart, error)
-	MarkCartAsBought(cartid string) error
+	ConfirmAndBuyCart(placeId string, userId string, orderService IOrderService, userService IUserService, buyService IBuyService) (*types.Cart, error)
+	MarkCartAsBought(cartId string) error
+	UpdateAmountToPay(cartId string, amountToPay int) error
 }
 
 type CartService struct {
-	ConnStr      string
-	OrderService IOrderService
-	UserService  IUserService
+	ConnStr string
 }
 
 func (s CartService) tableName() string {
@@ -28,14 +27,44 @@ func (s CartService) tableName() string {
 }
 
 func (s CartService) GetCart(userId string) (*types.Cart, error) {
+	c, err := s.getCartFromDB(userId, false)
+	if err != nil {
+		return nil, err
+	}
+	if c.Id == "" {
+		newCart, err := s.addCart(userId)
+		if err != nil {
+			return nil, fmt.Errorf("can't create new cart: %s", err.Error())
+		}
+		return newCart, nil
+	}
+	return c, nil
+}
+
+func (s CartService) GetBoughtCart(userId string) (*types.Cart, error) {
+	c, err := s.getCartFromDB(userId, false)
+	if err != nil {
+		return nil, err
+	}
+	if c.Id == "" {
+		newCart, err := s.addCart(userId)
+		if err != nil {
+			return nil, fmt.Errorf("can't create new cart: %s", err.Error())
+		}
+		return newCart, nil
+	}
+	return c, nil
+}
+
+func (s CartService) getCartFromDB(userId string, isConfirmed bool) (*types.Cart, error) {
 	db, err := sql.Open("postgres", s.ConnStr)
 	if err != nil {
 		return nil, err
 	}
 	defer db.Close()
 
-	query := fmt.Sprintf("SELECT * FROM %s WHERE \"UserId\" = $1 AND \"IsConfirmed\" = 'false' AND \"IsBought\" = 'false'", s.tableName())
-	rows, err := db.Query(query, userId)
+	query := fmt.Sprintf("SELECT \"Id\", \"UserId\", \"PlaceId\", \"AmountToPay\", \"IsConfirmed\", \"IsBought\" FROM %s WHERE \"UserId\" = $1 AND \"IsConfirmed\" = $2 AND \"IsBought\" = 'false'", s.tableName())
+	rows, err := db.Query(query, userId, isConfirmed)
 	if err != nil {
 		return nil, err
 	}
@@ -48,13 +77,6 @@ func (s CartService) GetCart(userId string) (*types.Cart, error) {
 			fmt.Println(err)
 			continue
 		}
-	}
-	if c.Id == "" {
-		newCart, err := s.addCart(userId)
-		if err != nil {
-			return nil, fmt.Errorf("can't create new cart: %s", err.Error())
-		}
-		return newCart, nil
 	}
 	return &c, nil
 }
@@ -86,31 +108,34 @@ func (s CartService) GetBoughtCarts(userId string) ([]types.Cart, error) {
 	return carts, nil
 }
 
-func (s CartService) ConfirmAndBuyCart(placeId string, userId string) (*types.Cart, error) {
+func (s CartService) ConfirmAndBuyCart(placeId string, userId string, orderService IOrderService, userService IUserService, buyService IBuyService) (*types.Cart, error) {
 	cart, err := s.GetCart(userId)
 	if err != nil {
 		return nil, err
 	}
-	orders, err := s.OrderService.GetOrders(cart.Id)
+	orders, err := orderService.GetOrders(cart.Id)
 	if err != nil {
 		return nil, err
 	}
 	if len(orders) == 0 {
 		return nil, errors.New("Cart has no orders !!!")
 	}
-	user, err := s.UserService.GetUser()
+	user, err := userService.GetUser()
 	if err != nil {
 		return nil, err
 	}
 	if user.Wallet < cart.AmountToPay {
 		return nil, fmt.Errorf("You have not enough money")
 	}
-	confirmedCart, err := s.confirmCart(placeId, userId)
+	confirmedCart, err := s.confirmCart(placeId, userId, cart.Id)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(confirmedCart.PlaceId)
-	// TODO buy cart
+	fmt.Println(*confirmedCart.PlaceId)
+	err = buyService.BuyCart(*confirmedCart)
+	if err != nil {
+		return nil, err
+	}
 	return confirmedCart, nil
 }
 func (s CartService) MarkCartAsBought(cartid string) error {
@@ -128,23 +153,38 @@ func (s CartService) MarkCartAsBought(cartid string) error {
 	return nil
 }
 
-func (s CartService) confirmCart(placeId string, userId string) (*types.Cart, error) {
+func (s CartService) confirmCart(placeId, userId, cartId string) (*types.Cart, error) {
 	db, err := sql.Open("postgres", s.ConnStr)
 	if err != nil {
 		return nil, err
 	}
 	defer db.Close()
 
-	query := fmt.Sprintf("UPDATE %s SET \"PlaceId\" = $1, \"IsConfirmed\" = $2", s.tableName())
-	_, err = db.Exec(query, placeId, true)
+	query := fmt.Sprintf("UPDATE %s SET \"PlaceId\" = $1 WHERE \"UserId\" = $2 AND \"Id\" = $3", s.tableName())
+	res, err := db.Exec(query, placeId, userId, cartId)
+	if err != nil {
+		return nil, err
+	}
+	if r, e := res.RowsAffected(); r == 0 || e != nil {
+		return nil, fmt.Errorf("Place does not set!!!")
+	}
+
+	foundCart, err := s.getCartFromDB(userId, false)
 	if err != nil {
 		return nil, err
 	}
 
-	foundCart, err := s.GetCart(userId)
+	confirmQuery := fmt.Sprintf("UPDATE %s SET \"IsConfirmed\" = $1 WHERE \"UserId\" = $2", s.tableName())
+	_, err = db.Exec(confirmQuery, true, userId)
 	if err != nil {
 		return nil, err
 	}
+
+	foundCart, err = s.getCartFromDB(userId, true)
+	if err != nil {
+		return nil, err
+	}
+
 	return foundCart, nil
 }
 func (s CartService) addCart(userId string) (*types.Cart, error) {
@@ -165,4 +205,19 @@ func (s CartService) addCart(userId string) (*types.Cart, error) {
 		return nil, err
 	}
 	return &c, nil
+}
+
+func (s CartService) UpdateAmountToPay(cartId string, amountToPay int) error {
+	db, err := sql.Open("postgres", s.ConnStr)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	query := fmt.Sprintf("UPDATE %s SET \"AmountToPay\" = $1 WHERE \"Id\" = $2", s.tableName())
+	_, err = db.Exec(query, amountToPay, cartId)
+	if err != nil {
+		return err
+	}
+	return nil
 }

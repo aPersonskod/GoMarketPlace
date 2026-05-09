@@ -27,7 +27,12 @@ func main() {
 	Service = services.UserService{ConnStr: connStr}
 	r := gin.Default()
 	// Use Default() for basic "allow all origins"
-	r.Use(cors.Default())
+	//r.Use(middleware.CorsMiddleware())
+	r.Use(cors.New(cors.Config{
+		AllowOrigins: []string{"http://localhost:5173"},
+		AllowMethods: []string{"GET", "POST", "PUT", "DELETE"},
+		AllowHeaders: []string{"Origin", "Content-Type", "Accept", "Authorization"},
+	}))
 
 	r.GET("/ping", func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{
