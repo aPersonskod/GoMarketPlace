@@ -31,16 +31,44 @@ const ProductCatalogPage = () => {
                 setCart(null);
                 return;
                 throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const result = await response.json();
-            if(result.isConfirmed) setOrders([]);
-            setCart(result);
+            }   
+            const cartResult = await response.json();
+            //if(cartResult.isConfirmed) setOrders([]);
+            setCart(cartResult);
         } catch (err) {
             setError(err);
         } finally {
             setLoading(false);
         }
     };
+
+    const handleDeleteCart = async () => {
+        try {
+            let token = apiHelper.getAccessToken();
+            let query = `${apiHelper.orderServiceBaseAddress}/delete-cart/${cart.id}`;
+            const response = await fetch(query, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization' : `Bearer ${token}`
+                }//,
+                //body: JSON.stringify(requestBody),
+            });
+
+            if (!response.ok) {
+                //throw new Error(`HTTP error! status: ${response.status}`);
+                alert(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log('Update successful:', data);
+            await fetchCartData();
+        } catch (err) {
+            setError(err);
+        } finally {
+            setLoading(false);
+        }
+    }
     
     useEffect(() => {
         fetchCartData();
@@ -60,11 +88,24 @@ const ProductCatalogPage = () => {
                 <div className='col col-xs-12 col-sm-12 col-lg-6'>
                     <p className='fs24'>Продукты:</p>
                     <div className='divStyle xsDivStyle mdDivStyle'>
-                        <Products cart={cart} setAmmountToPay={setAmmountToPay}/>
+                        <Products cart={cart} setAmmountToPay={setAmmountToPay} refreshCartFunc={fetchCartData}/>
                     </div>
                 </div>
                 <div className='col col-xs-12 col-sm-12 col-lg-6'>
-                    <p className='fs24'>Корзина:</p>
+                    <div className='d-flex'>
+                        <p className='fs24'>Корзина:</p>
+                        {cart !== null &&
+                            <div>
+                                <Button style={{backgroundColor:"red", marginLeft:"10px"}} onClick={handleDeleteCart}>Удалить</Button>
+                            </div>
+                        }
+                        {cart !== null &&
+                            <div className='d-flex'>
+                                <p className='fs24' style={{marginLeft:"10px"}}>Сумма к оплате:</p>
+                                <p className='fs24' style={{marginLeft:"10px"}}>{cart.amountToPay}</p>
+                            </div>
+                        }   
+                    </div>
                     <div className='divStyle xsDivStyle mdDivStyle'>
                         <ProductCart key={ammountToPay} cart={cart}/>
                     </div>

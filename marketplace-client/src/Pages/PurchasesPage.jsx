@@ -13,7 +13,7 @@ const PurchasesPage = () => {
             let user = await apiHelper.getUser();
             if (user === null) setBuyActions([]);
             let token = apiHelper.getAccessToken();
-            let query = `${apiHelper.buyServiceBaseAddress}/get-report-by-userid`;
+            let query = `${apiHelper.buyServiceBaseAddress}/get-reports-by-userid`;
             let options = {
                 method: 'GET',
                 headers: {
@@ -67,7 +67,7 @@ const PurchasesPage = () => {
     return(
         <>
             <p className='fs24'>История покупок</p>
-            <Table responsive="sm">
+            <Table responsive>
                 <thead>
                 <tr>
                     <th>#</th>

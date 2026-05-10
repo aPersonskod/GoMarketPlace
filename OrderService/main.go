@@ -72,8 +72,6 @@ func main() {
 	if err != nil {
 		panic(err.Error())
 	}
-	db.SetMaxOpenConns(10) // Ограничить количество открытых соединений
-	db.SetMaxIdleConns(10) // Ограничить количество простаивающих соединений
 	s := MainStore{DB: db}
 
 	r.GET("/ping", func(ctx *gin.Context) {
@@ -97,9 +95,10 @@ func main() {
 			wa.GET("/get-bought-carts", s.GetBoughtCarts)
 			wa.POST("/confirm-cart", s.ConfirmCart)
 			wa.POST("/mark-cart-as-bought", s.MarkCartAsBought)
+			wa.DELETE("/delete-cart/:id", s.DeleteCart)
 
 			wa.PUT("/add-order", s.AddOrder)
-			wa.DELETE("/delete-order/:id", s.DeleteOrder)
+			wa.DELETE("/delete-order", s.DeleteOrder)
 		}
 	}
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
@@ -221,6 +220,25 @@ func (s *MainStore) MarkCartAsBought(ctx *gin.Context) {
 }
 
 // @BasePath /api
+// @Description delete cart
+// @Tags order-service/cart
+// @Accept json
+// @Produce json
+// @Param   id	path	string		true	"Cart ID"
+// @Success 200 {string} Ok
+// @Router /order-service/delete-cart/{id} [DELETE]
+func (s *MainStore) DeleteCart(ctx *gin.Context) {
+	initServices(ctx, s)
+	cartId := ctx.Param("id")
+	err := cartService.DeleteCart(cartId, orderService, cartService, productService)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, "Cart successfuly deleted")
+}
+
+// @BasePath /api
 // @Summary GetOrders
 // @Schemes
 // @Description Get orders by cart id from db
@@ -269,13 +287,19 @@ func (s *MainStore) AddOrder(ctx *gin.Context) {
 // @Tags order-service
 // @Accept json
 // @Produce json
-// @Param   id	path	string		true	"Product ID"
-// @Success 200 {string} idk_WTF
-// @Router /order-service/delete-order/{id} [DELETE]
+// @Param   productId	query	string		true	"Product ID"
+// @Param   cartId		query	string		true	"Cart ID"
+// @Success 200 {string} Ok
+// @Router /order-service/delete-order [DELETE]
 func (s *MainStore) DeleteOrder(ctx *gin.Context) {
 	initServices(ctx, s)
-	productId := ctx.Param("id")
-	err := orderService.DeleteOrder(productId)
+	productId := ctx.Query("productId")
+	cartId := ctx.Query("cartId")
+	if productId == "" || cartId == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Product id and cart id params required !!!"})
+		return
+	}
+	err := orderService.DeleteOrder(productId, cartId, cartService, productService)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

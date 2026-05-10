@@ -29,22 +29,13 @@ const docTemplate = `{
                 ],
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "Product id",
-                        "name": "productId",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Cart id",
-                        "name": "cartId",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Quantity",
-                        "name": "quantity",
-                        "in": "query"
+                        "description": "Order data",
+                        "name": "order",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.OrderDto"
+                        }
                     }
                 ],
                 "responses": {
@@ -84,7 +75,38 @@ const docTemplate = `{
                 }
             }
         },
-        "/order-service/delete-order/{id}": {
+        "/order-service/delete-cart/{id}": {
+            "delete": {
+                "description": "delete cart",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "order-service/cart"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cart ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/order-service/delete-order": {
             "delete": {
                 "description": "delete order",
                 "consumes": [
@@ -100,10 +122,39 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "Product ID",
-                        "name": "id",
-                        "in": "path",
+                        "name": "productId",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Cart ID",
+                        "name": "cartId",
+                        "in": "query",
                         "required": true
                     }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/order-service/get-bought-carts": {
+            "get": {
+                "description": "description of function that get bought carts to auth user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "order-service/cart"
                 ],
                 "responses": {
                     "200": {
@@ -235,8 +286,8 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Place id",
-                        "name": "placeId",
+                        "description": "Cart id",
+                        "name": "cartId",
                         "in": "query"
                     }
                 ],
@@ -247,6 +298,22 @@ const docTemplate = `{
                             "type": "string"
                         }
                     }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "types.OrderDto": {
+            "type": "object",
+            "properties": {
+                "cartId": {
+                    "type": "string"
+                },
+                "orderedProductId": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
                 }
             }
         }

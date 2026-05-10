@@ -1,3 +1,13 @@
+definitions:
+  types.OrderDto:
+    properties:
+      cartId:
+        type: string
+      orderedProductId:
+        type: string
+      quantity:
+        type: integer
+    type: object
 info:
   contact: {}
 paths:
@@ -7,18 +17,12 @@ paths:
       - application/json
       description: add order
       parameters:
-      - description: Product id
-        in: query
-        name: productId
-        type: string
-      - description: Cart id
-        in: query
-        name: cartId
-        type: string
-      - description: Quantity
-        in: query
-        name: quantity
-        type: integer
+      - description: Order data
+        in: body
+        name: order
+        required: true
+        schema:
+          $ref: '#/definitions/types.OrderDto'
       produces:
       - application/json
       responses:
@@ -45,13 +49,13 @@ paths:
             type: string
       tags:
       - order-service/cart
-  /order-service/delete-order/{id}:
+  /order-service/delete-cart/{id}:
     delete:
       consumes:
       - application/json
-      description: delete order
+      description: delete cart
       parameters:
-      - description: Product ID
+      - description: Cart ID
         in: path
         name: id
         required: true
@@ -64,7 +68,46 @@ paths:
           schema:
             type: string
       tags:
+      - order-service/cart
+  /order-service/delete-order:
+    delete:
+      consumes:
+      - application/json
+      description: delete order
+      parameters:
+      - description: Product ID
+        in: query
+        name: productId
+        required: true
+        type: string
+      - description: Cart ID
+        in: query
+        name: cartId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      tags:
       - order-service
+  /order-service/get-bought-carts:
+    get:
+      consumes:
+      - application/json
+      description: description of function that get bought carts to auth user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      tags:
+      - order-service/cart
   /order-service/get-cart:
     get:
       consumes:
@@ -141,9 +184,9 @@ paths:
       - application/json
       description: confirm cart
       parameters:
-      - description: Place id
+      - description: Cart id
         in: query
-        name: placeId
+        name: cartId
         type: string
       responses:
         "200":

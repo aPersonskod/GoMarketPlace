@@ -25,17 +25,11 @@ type IUserService interface {
 }
 
 type UserService struct {
-	ConnStr string
+	DB *sql.DB
 }
 
-func (service UserService) GetUsers() ([]types.UserDto, error) {
-	db, err := sql.Open("postgres", service.ConnStr)
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-
-	rows, err := db.Query(fmt.Sprintf("SELECT * FROM %s", tableName))
+func (s UserService) GetUsers() ([]types.UserDto, error) {
+	rows, err := s.DB.Query(fmt.Sprintf("SELECT * FROM %s", tableName))
 	if err != nil {
 		return nil, err
 	}
@@ -54,15 +48,9 @@ func (service UserService) GetUsers() ([]types.UserDto, error) {
 	return users, nil
 }
 
-func (service UserService) GetUserById(id string) (*types.UserDto, error) {
-	db, err := sql.Open("postgres", service.ConnStr)
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-
+func (s UserService) GetUserById(id string) (*types.UserDto, error) {
 	query := fmt.Sprintf("SELECT * FROM %s WHERE \"Id\" = $1", tableName)
-	rows, err := db.Query(query, id)
+	rows, err := s.DB.Query(query, id)
 	if err != nil {
 		return nil, err
 	}
@@ -80,15 +68,9 @@ func (service UserService) GetUserById(id string) (*types.UserDto, error) {
 	return &userDto, nil
 }
 
-func (service UserService) GetUserByEmail(email string) (*types.User, error) {
-	db, err := sql.Open("postgres", service.ConnStr)
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-
+func (s UserService) GetUserByEmail(email string) (*types.User, error) {
 	query := fmt.Sprintf("SELECT * FROM %s WHERE \"Email\" = $1 limit 1", tableName)
-	rows, err := db.Query(query, email)
+	rows, err := s.DB.Query(query, email)
 	if err != nil {
 		return nil, err
 	}
@@ -109,17 +91,11 @@ func (service UserService) GetUserByEmail(email string) (*types.User, error) {
 	return &u, nil
 }
 
-func (service UserService) AddUser(u *types.User) (*types.UserDto, error) {
-	db, err := sql.Open("postgres", service.ConnStr)
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-
+func (s UserService) AddUser(u *types.User) (*types.UserDto, error) {
 	newId := uuid.New()
 	u.Id = fmt.Sprintf("%s", newId)
 	query := fmt.Sprintf("INSERT INTO %s (\"Id\", \"Name\", \"Email\", \"Password\", \"Wallet\", \"Role\") VALUES ($1, $2, $3, $4, $5, $6)", tableName)
-	_, err = db.Exec(query, u.Id, u.Name, u.Email, u.Password, u.Wallet, u.Role)
+	_, err := s.DB.Exec(query, u.Id, u.Name, u.Email, u.Password, u.Wallet, u.Role)
 	if err != nil {
 		return nil, err
 	}
@@ -127,50 +103,32 @@ func (service UserService) AddUser(u *types.User) (*types.UserDto, error) {
 	return &userDto, nil
 }
 
-func (service UserService) UpdateUser(u *types.UpdateUserDto) (*types.UserDto, error) {
-	db, err := sql.Open("postgres", service.ConnStr)
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-
+func (s UserService) UpdateUser(u *types.UpdateUserDto) (*types.UserDto, error) {
 	query := "UPDATE public.\"Users\" SET \"Name\" = $1, \"Email\" = $2, \"Role\" = $3 WHERE \"Id\" = $4"
-	_, err = db.Exec(query, u.Name, u.Email, u.Role, u.Id)
+	_, err := s.DB.Exec(query, u.Name, u.Email, u.Role, u.Id)
 	if err != nil {
 		return nil, err
 	}
 
-	userDto, err := service.GetUserById(u.Id)
+	userDto, err := s.GetUserById(u.Id)
 	if err != nil {
 		return nil, err
 	}
 	return userDto, nil
 }
 
-func (service UserService) DeleteUser(id string) error {
-	db, err := sql.Open("postgres", service.ConnStr)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
+func (s UserService) DeleteUser(id string) error {
 	query := fmt.Sprintf("DELETE FROM %s WHERE \"Id\" = $1", tableName)
-	_, err = db.Exec(query, id)
+	_, err := s.DB.Exec(query, id)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (service UserService) WalletReplenishment(id string, money int) (*types.UserDto, error) {
-	db, err := sql.Open("postgres", service.ConnStr)
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-
+func (s UserService) WalletReplenishment(id string, money int) (*types.UserDto, error) {
 	getQuery := fmt.Sprintf("SELECT * FROM %s WHERE \"Id\" = $1", tableName)
-	rows, err := db.Query(getQuery, id)
+	rows, err := s.DB.Query(getQuery, id)
 	if err != nil {
 		return nil, err
 	}
@@ -185,27 +143,21 @@ func (service UserService) WalletReplenishment(id string, money int) (*types.Use
 	}
 
 	query := fmt.Sprintf("UPDATE %s SET \"Wallet\" = $1", tableName)
-	_, err = db.Exec(query, u.Wallet+money)
+	_, err = s.DB.Exec(query, u.Wallet+money)
 	if err != nil {
 		return nil, err
 	}
 
-	userDto, err := service.GetUserById(id)
+	userDto, err := s.GetUserById(id)
 	if err != nil {
 		return nil, err
 	}
 	return userDto, nil
 }
 
-func (service UserService) SpendMoney(id string, money int) (*types.UserDto, error) {
-	db, err := sql.Open("postgres", service.ConnStr)
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-
+func (s UserService) SpendMoney(id string, money int) (*types.UserDto, error) {
 	getQuery := fmt.Sprintf("SELECT * FROM %s WHERE \"Id\" = $1", tableName)
-	rows, err := db.Query(getQuery, id)
+	rows, err := s.DB.Query(getQuery, id)
 	if err != nil {
 		return nil, err
 	}
@@ -220,12 +172,12 @@ func (service UserService) SpendMoney(id string, money int) (*types.UserDto, err
 	}
 
 	query := fmt.Sprintf("UPDATE %s SET \"Wallet\" = $1", tableName)
-	_, err = db.Exec(query, u.Wallet-money)
+	_, err = s.DB.Exec(query, u.Wallet-money)
 	if err != nil {
 		return nil, err
 	}
 
-	userDto, err := service.GetUserById(id)
+	userDto, err := s.GetUserById(id)
 	if err != nil {
 		return nil, err
 	}

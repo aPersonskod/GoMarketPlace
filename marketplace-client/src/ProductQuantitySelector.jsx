@@ -3,7 +3,7 @@ import Button from "react-bootstrap/Button";
 import {ApiHelper} from "./ApiHelper.jsx";
 import { useNavigate } from 'react-router';
 
-const ProductQuantitySelector = ({ productName, productCost, productId, setAmmountToPay, cart, minQuantity = 0, maxQuantity = 99}) => {
+const ProductQuantitySelector = ({ productName, productCost, productId, setAmmountToPay, cart, refreshCartFunc, minQuantity = 0, maxQuantity = 99}) => {
     // Basic inline styles for quick demonstration
     const styles = {
         container: {
@@ -120,7 +120,8 @@ const ProductQuantitySelector = ({ productName, productCost, productId, setAmmou
     const updateCart = async (amount, user) => {
         setCounter(amount);
         await addProductToCart(amount, user);
-        await refreshAnotherComponents();
+        refreshCartFunc();
+        //await refreshAnotherComponents();
     }
 
     const addProductToCart = async (amount, user) => {
@@ -156,30 +157,6 @@ const ProductQuantitySelector = ({ productName, productCost, productId, setAmmou
         } catch (error) {
             setError(error.message);
             console.error('Error updating user:', error);
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    const refreshAnotherComponents = async () => {
-        // must go after setting count to db !!!
-        try {
-            let token = apiHelper.getAccessToken();
-            let query = `${apiHelper.orderServiceBaseAddress}/get-cart`;
-            const response = await fetch(query, {
-                method: 'GET',
-                headers: {
-                    'Authorization' : `Bearer ${token}`
-                }
-            });
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const result = await response.json();
-            // update ProductCartComponent
-            setAmmountToPay(result.amountToPay);
-        } catch (err) {
-            setError(err);
         } finally {
             setLoading(false);
         }

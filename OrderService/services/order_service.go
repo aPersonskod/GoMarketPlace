@@ -12,7 +12,7 @@ import (
 type IOrderService interface {
 	GetOrders(cartId string) ([]types.Order, error)                                                                   // TODO need to get from redis db
 	AddOrder(orderDto types.OrderDto, cartService ICartService, productService IProductService) (*types.Order, error) // TODO need to get from redis db
-	DeleteOrder(productId string) error                                                                               // TODO need to get from redis db
+	DeleteOrder(productId, cartId string, cartService ICartService, productService IProductService) error             // TODO need to get from redis db
 }
 
 type OrderService struct {
@@ -66,7 +66,7 @@ func (s OrderService) AddOrder(orderDto types.OrderDto, cartService ICartService
 			return nil, err
 		}
 
-		err = s.updateAmountToPay(createdOrder, cartService, productService)
+		err = s.updateAmountToPay(createdOrder.CartId, cartService, productService)
 		if err != nil {
 			return nil, err
 		}
@@ -76,19 +76,19 @@ func (s OrderService) AddOrder(orderDto types.OrderDto, cartService ICartService
 	if err != nil {
 		return nil, err
 	}
-	err = s.updateAmountToPay(addedOrder, cartService, productService)
+	err = s.updateAmountToPay(addedOrder.CartId, cartService, productService)
 	if err != nil {
 		return nil, err
 	}
 	return addedOrder, nil
 }
 
-func (s OrderService) updateAmountToPay(order *types.Order, cartService ICartService, productService IProductService) error {
-	amountToPay, err := s.getAmountToPay(order.CartId, productService)
+func (s OrderService) updateAmountToPay(cartId string, cartService ICartService, productService IProductService) error {
+	amountToPay, err := s.getAmountToPay(cartId, productService)
 	if err != nil {
 		return err
 	}
-	err = cartService.UpdateAmountToPay(order.CartId, amountToPay)
+	err = cartService.UpdateAmountToPay(cartId, amountToPay)
 	if err != nil {
 		return err
 	}
@@ -112,8 +112,8 @@ func (s OrderService) createOrder(orderDto types.OrderDto) (*types.Order, error)
 }
 
 func (s OrderService) appendOrder(orderDto types.OrderDto, orderId string) (*types.Order, error) {
-	query := fmt.Sprintf("UPDATE %s SET \"Quantity\" = $1 WHERE \"OrderedProductId\" = $2", s.tableName())
-	_, err := s.DB.Exec(query, orderDto.Quantity, orderDto.OrderedProductId)
+	query := fmt.Sprintf("UPDATE %s SET \"Quantity\" = $1 WHERE \"OrderedProductId\" = $2 AND \"CartId\" = $3", s.tableName())
+	_, err := s.DB.Exec(query, orderDto.Quantity, orderDto.OrderedProductId, orderDto.CartId)
 	if err != nil {
 		return nil, err
 	}
@@ -142,9 +142,13 @@ func (s OrderService) getAmountToPay(cartId string, productService IProductServi
 	return amountToPay, nil
 }
 
-func (s OrderService) DeleteOrder(productId string) error {
-	query := fmt.Sprintf("DELETE FROM %s WHERE \"OrderedProductId\" = $1", s.tableName())
-	_, err := s.DB.Exec(query, productId)
+func (s OrderService) DeleteOrder(productId string, cartId string, cartService ICartService, productService IProductService) error {
+	query := fmt.Sprintf("DELETE FROM %s WHERE \"OrderedProductId\" = $1 AND \"CartId\" = $2", s.tableName())
+	_, err := s.DB.Exec(query, productId, cartId)
+	if err != nil {
+		return err
+	}
+	err = s.updateAmountToPay(cartId, cartService, productService)
 	if err != nil {
 		return err
 	}

@@ -37,7 +37,7 @@ function ProductCart({cart}) {
                 <div style={{margin: '5px', overflowY: 'auto'}}>
                     <div className='d-flex flex-wrap'>
                         {!error && orders.map((item, index) => (
-                            <OrderedProduct key={index} productId={item.orderedProductId} quantity={item.quantity}/>
+                            <OrderedProduct key={index} productId={item.orderedProductId} cartId={item.cartId} quantity={item.quantity}/>
                         ))}
                     </div>
                 </div>

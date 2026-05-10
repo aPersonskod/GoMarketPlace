@@ -4,6 +4,7 @@ import (
 	"buy_service/types"
 	"database/sql"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -17,7 +18,7 @@ type IBuyService interface {
 }
 
 type BuyService struct {
-	ConnStr      string
+	DB           *sql.DB
 	OrderService IOrderService
 	UserService  IUserService
 }
@@ -28,14 +29,8 @@ func (s BuyService) tableName() string {
 
 // IT DOES NOT WORK, IDK WHY DO I NEED THIS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 func (s BuyService) GetReportById(reportId, userId string, userService IUserService, orderService IOrderService) (*types.BuyReportDto, error) {
-	db, err := sql.Open("postgres", s.ConnStr)
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-
 	query := fmt.Sprintf("SELECT * FROM %s WHERE \"Id\" = $1", s.tableName())
-	rows, err := db.Query(query, reportId)
+	rows, err := s.DB.Query(query, reportId)
 	if err != nil {
 		return nil, err
 	}
@@ -57,14 +52,8 @@ func (s BuyService) GetReportById(reportId, userId string, userService IUserServ
 }
 
 func (s BuyService) getBuyReportByCart(cart *types.CartDto) (*types.BuyReport, error) {
-	db, err := sql.Open("postgres", s.ConnStr)
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-
 	query := fmt.Sprintf("SELECT * FROM %s WHERE \"CartId\" = $1", s.tableName())
-	rows, err := db.Query(query, cart.Id)
+	rows, err := s.DB.Query(query, cart.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -102,6 +91,15 @@ func (s BuyService) GetReportsByUserId(userId string, userService IUserService, 
 		}
 		reports = append(reports, *rDto)
 	}
+	slices.SortFunc(reports, func(a, b types.BuyReportDto) int {
+		if a.SaleDate.Before(b.SaleDate) {
+			return 1
+		}
+		if b.SaleDate.Before(a.SaleDate) {
+			return -1
+		}
+		return 0
+	})
 	return reports, nil
 }
 
@@ -147,14 +145,8 @@ func (s BuyService) addBuyReport(cartId string) error {
 		CartId:   cartId,
 		SaleDate: time.Now(),
 	}
-	db, err := sql.Open("postgres", s.ConnStr)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
 	query := fmt.Sprintf("INSERT INTO %s (\"Id\", \"CartId\", \"SaleDate\") VALUES ($1, $2, $3)", s.tableName())
-	_, err = db.Exec(query, r.Id, r.CartId, r.SaleDate)
+	_, err := s.DB.Exec(query, r.Id, r.CartId, r.SaleDate)
 	if err != nil {
 		return err
 	}

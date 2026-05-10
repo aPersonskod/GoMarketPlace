@@ -5,6 +5,7 @@ import (
 	"buy_service/middleware"
 	"buy_service/services"
 	"buy_service/types"
+	"database/sql"
 	"fmt"
 	"net/http"
 
@@ -16,6 +17,10 @@ import (
 	swaggerfiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
+
+type MainStore struct {
+	DB *sql.DB
+}
 
 var buy_service services.IBuyService
 var order_service services.IOrderService
@@ -33,7 +38,7 @@ func getAuthHeader(ctx *gin.Context) (string, error) {
 	return authHeader, nil
 }
 
-func initServices(ctx *gin.Context) error {
+func initServices(ctx *gin.Context, store *MainStore) error {
 	authHeader, err := getAuthHeader(ctx)
 	if err != nil {
 		return err
@@ -42,7 +47,7 @@ func initServices(ctx *gin.Context) error {
 	user_service = services.UserService{AuthHeader: authHeader}
 	order_service = services.OrderService{AuthHeader: authHeader}
 	buy_service = services.BuyService{
-		ConnStr:      getConnStr(configs.Env.DbUser, configs.Env.DbPassword, configs.Env.DbName),
+		DB:           store.DB,
 		OrderService: order_service,
 		UserService:  user_service,
 	}
@@ -61,6 +66,12 @@ func main() {
 		AllowCredentials: true,
 	}))
 
+	db, err := sql.Open("postgres", getConnStr(configs.Env.DbUser, configs.Env.DbPassword, configs.Env.DbName))
+	if err != nil {
+		panic(err.Error())
+	}
+	s := MainStore{DB: db}
+
 	r.GET("/ping", func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{
 			"message": "pong",
@@ -73,9 +84,9 @@ func main() {
 		gr := v1.Group("/buy-service")
 		{
 			wa := gr.Use(middleware.JwtAuthMiddleware())
-			wa.GET("/get-report-by-id/:id", GetReportById)
-			wa.GET("/get-report-by-userid", GetReportByUserId)
-			wa.POST("/buy-cart", BuyCart)
+			wa.GET("/get-report-by-id/:id", s.GetReportById)
+			wa.GET("/get-reports-by-userid", s.GetReportsByUserId)
+			wa.POST("/buy-cart", s.BuyCart)
 		}
 	}
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
@@ -90,8 +101,8 @@ func main() {
 // @Param   id	path	string		true	"Report ID"
 // @Success 200 {string} Ok
 // @Router /buy-service/get-report-by-id/{id} [get]
-func GetReportById(ctx *gin.Context) {
-	initServices(ctx)
+func (s MainStore) GetReportById(ctx *gin.Context) {
+	initServices(ctx, &s)
 	reportId := ctx.Param("id")
 	userId, _ := ctx.Get("id") // protected data
 
@@ -109,9 +120,9 @@ func GetReportById(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Success 200 {string} Ok
-// @Router /buy-service/get-report-by-userid [get]
-func GetReportByUserId(ctx *gin.Context) {
-	initServices(ctx)
+// @Router /buy-service/get-reports-by-userid [get]
+func (s MainStore) GetReportsByUserId(ctx *gin.Context) {
+	initServices(ctx, &s)
 	userId, _ := ctx.Get("id") // protected data
 
 	reports, err := buy_service.GetReportsByUserId(fmt.Sprint(userId), user_service, order_service)
@@ -130,8 +141,8 @@ func GetReportByUserId(ctx *gin.Context) {
 // @Param cart	body	types.Cart	true	"Cart data"
 // @Success 200 {string} Ok
 // @Router /buy-service/buy-cart [POST]
-func BuyCart(ctx *gin.Context) {
-	initServices(ctx)
+func (s MainStore) BuyCart(ctx *gin.Context) {
+	initServices(ctx, &s)
 	cart := types.CartDto{}
 	if err := ctx.ShouldBindJSON(&cart); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

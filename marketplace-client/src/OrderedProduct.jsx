@@ -1,7 +1,7 @@
 import {useEffect, useState} from "react";
 import {ApiHelper} from "./ApiHelper.jsx";
 
-const OrderedProduct = ({ productId, quantity}) => {
+const OrderedProduct = ({ productId, cartId, quantity}) => {
     // Basic inline styles for quick demonstration
     const styles = {
         container: {
@@ -62,7 +62,7 @@ const OrderedProduct = ({ productId, quantity}) => {
         setError(null);
         try {
             let token = apiHelper.getAccessToken();
-            let query = `${apiHelper.orderServiceBaseAddress}/delete-order/${productId}`;
+            let query = `${apiHelper.orderServiceBaseAddress}/delete-order?productId=${productId}&cartId=${cartId}`;
             const response = await fetch(query, {
                 method: 'DELETE',
                 headers: {

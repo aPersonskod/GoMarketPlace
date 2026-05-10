@@ -16,6 +16,7 @@ type ICartService interface {
 	ConfirmAndBuyCart(placeId string, userId string, orderService IOrderService, userService IUserService, buyService IBuyService) (*types.Cart, error)
 	MarkCartAsBought(cartId string) error
 	UpdateAmountToPay(cartId string, amountToPay int) error
+	DeleteCart(cartId string, orderService IOrderService, cartService ICartService, productService IProductService) error
 }
 
 type CartService struct {
@@ -27,9 +28,15 @@ func (s CartService) tableName() string {
 }
 
 func (s CartService) GetCart(userId string) (*types.Cart, error) {
-	c, err := s.getCartFromDB(userId, false)
+	c, err := s.getCartFromDB(userId, true)
 	if err != nil {
 		return nil, err
+	}
+	if c.Id == "" {
+		c, err = s.getCartFromDB(userId, false)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if c.Id == "" {
 		newCart, err := s.addCart(userId)
@@ -97,7 +104,7 @@ func (s CartService) GetBoughtCarts(userId string) ([]types.Cart, error) {
 }
 
 func (s CartService) ConfirmAndBuyCart(placeId string, userId string, orderService IOrderService, userService IUserService, buyService IBuyService) (*types.Cart, error) {
-	cart, err := s.GetCart(userId)
+	cart, err := s.GetCart(userId) // TODO if in DB exists multiple not confirmed carts - get wrong cart
 	if err != nil {
 		return nil, err
 	}
@@ -180,6 +187,28 @@ func (s CartService) addCart(userId string) (*types.Cart, error) {
 func (s CartService) UpdateAmountToPay(cartId string, amountToPay int) error {
 	query := fmt.Sprintf("UPDATE %s SET \"AmountToPay\" = $1 WHERE \"Id\" = $2", s.tableName())
 	_, err := s.DB.Exec(query, amountToPay, cartId)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s CartService) DeleteCart(cartid string, orderService IOrderService, cartService ICartService, productService IProductService) error {
+
+	cartOrders, err := orderService.GetOrders(cartid)
+	if err != nil {
+		return err
+	}
+	// delete all cart orders
+	for _, order := range cartOrders {
+		err = orderService.DeleteOrder(order.OrderedProductId, order.CartId, cartService, productService)
+		if err != nil {
+			return err
+		}
+	}
+	// delete cart
+	deleteCartQuery := fmt.Sprintf("DELETE FROM %s WHERE \"Id\" = $1", s.tableName())
+	_, err = s.DB.Exec(deleteCartQuery, cartid)
 	if err != nil {
 		return err
 	}

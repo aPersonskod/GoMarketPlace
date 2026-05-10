@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -18,21 +19,37 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-var connStr string = fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable",
-	configs.Env.DbUser, configs.Env.DbPassword, configs.Env.DbName)
+type MainStore struct {
+	DB *sql.DB
+}
 
-var Service services.IUserService
+func getConnStr(dbUser, dbPassword, dbName string) string {
+	return fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", dbUser, dbPassword, dbName)
+}
+
+func initServices(store *MainStore) error {
+	user_service = services.UserService{DB: store.DB}
+
+	return nil
+}
+
+var user_service services.IUserService
 
 func main() {
-	Service = services.UserService{ConnStr: connStr}
+
 	r := gin.Default()
-	// Use Default() for basic "allow all origins"
-	//r.Use(middleware.CorsMiddleware())
 	r.Use(cors.New(cors.Config{
 		AllowOrigins: []string{"http://localhost:5173"},
 		AllowMethods: []string{"GET", "POST", "PUT", "DELETE"},
 		AllowHeaders: []string{"Origin", "Content-Type", "Accept", "Authorization"},
 	}))
+
+	db, err := sql.Open("postgres", getConnStr(configs.Env.DbUser, configs.Env.DbPassword, configs.Env.DbName))
+	if err != nil {
+		panic(err.Error())
+	}
+
+	initServices(&MainStore{DB: db})
 
 	r.GET("/ping", func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{
@@ -90,7 +107,7 @@ func GetUsers(ctx *gin.Context) {
 		ctx.JSON(http.StatusForbidden, gin.H{"error": "You don't have sufficient permissions"})
 		return
 	}
-	users, err := Service.GetUsers()
+	users, err := user_service.GetUsers()
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -109,7 +126,7 @@ func GetUsers(ctx *gin.Context) {
 func GetUser(ctx *gin.Context) {
 	//id := ctx.Param("id")
 	id, _ := ctx.Get("id") // protected data
-	u, err := Service.GetUserById(fmt.Sprint(id))
+	u, err := user_service.GetUserById(fmt.Sprint(id))
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, err)
 		return
@@ -132,7 +149,7 @@ func AddUser(ctx *gin.Context) {
 		return
 	}
 
-	u, err := Service.AddUser(&user)
+	u, err := user_service.AddUser(&user)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, err)
 		return
@@ -155,7 +172,7 @@ func UpdateUser(ctx *gin.Context) {
 		return
 	}
 
-	u, err := Service.UpdateUser(&user)
+	u, err := user_service.UpdateUser(&user)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, err)
 		return
@@ -174,7 +191,7 @@ func UpdateUser(ctx *gin.Context) {
 func DeleteUser(ctx *gin.Context) {
 	//id := ctx.Param("id")
 	id, _ := ctx.Get("id")
-	err := Service.DeleteUser(fmt.Sprint(id))
+	err := user_service.DeleteUser(fmt.Sprint(id))
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, err)
 		return
@@ -197,7 +214,7 @@ func WalletReplenishment(ctx *gin.Context) {
 		return
 	}
 
-	u, err := Service.WalletReplenishment(fmt.Sprint(id), money)
+	u, err := user_service.WalletReplenishment(fmt.Sprint(id), money)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, err)
 		return
@@ -217,7 +234,7 @@ func SpendMoney(ctx *gin.Context) {
 	id, _ := ctx.Get("id")
 	money, err := strconv.Atoi(ctx.Query("money"))
 
-	u, err := Service.SpendMoney(fmt.Sprint(id), money)
+	u, err := user_service.SpendMoney(fmt.Sprint(id), money)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, err)
 		return
@@ -240,7 +257,7 @@ func Login(ctx *gin.Context) {
 		return
 	}
 
-	user, err := Service.GetUserByEmail(credentials.Email)
+	user, err := user_service.GetUserByEmail(credentials.Email)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
