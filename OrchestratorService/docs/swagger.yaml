@@ -1,0 +1,28 @@
+definitions:
+  main.Cart:
+    type: object
+info:
+  contact: {}
+paths:
+  /buy-actions/buy-cart:
+    post:
+      consumes:
+      - application/json
+      description: buy cart
+      parameters:
+      - description: Cart data
+        in: body
+        name: cart
+        required: true
+        schema:
+          $ref: '#/definitions/main.Cart'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      tags:
+      - buy-service
+swagger: "2.0"

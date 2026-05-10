@@ -104,7 +104,7 @@ func (s CartService) GetBoughtCarts(userId string) ([]types.Cart, error) {
 }
 
 func (s CartService) ConfirmAndBuyCart(placeId string, userId string, orderService IOrderService, userService IUserService, buyService IBuyService) (*types.Cart, error) {
-	cart, err := s.GetCart(userId) // TODO if in DB exists multiple not confirmed carts - get wrong cart
+	cart, err := s.GetCart(userId)
 	if err != nil {
 		return nil, err
 	}
