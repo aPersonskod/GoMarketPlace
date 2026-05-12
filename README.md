@@ -10,9 +10,9 @@ GoMarketPlace
 
 Ниже приведены экраны приложения:
 
-Экран авторизации. ![alt text](image.png)
+Экран авторизации. ![alt text](images/image.png)
 
-Экран каталога товаров и корзины. ![alt text](image-1.png)
+Экран каталога товаров и корзины. ![alt text](images/image-1.png)
 
-Экран оформления заказа. ![alt text](image-2.png)
-Экран осуществленных покупок. ![alt text](image-3.png)
+Экран оформления заказа. ![alt text](images/image-2.png)
+Экран осуществленных покупок. ![alt text](images/image-3.png)
