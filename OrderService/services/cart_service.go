@@ -13,8 +13,10 @@ import (
 type ICartService interface {
 	GetCart(userId string) (*types.Cart, error)
 	GetBoughtCarts(userId string) ([]types.Cart, error)
-	ConfirmAndBuyCart(placeId string, userId string, orderService IOrderService, userService IUserService, buyService IBuyService) (*types.Cart, error)
+	ConfirmCart(placeId string, userId string, orderService IOrderService, userService IUserService) (*types.Cart, error)
+	UnconfirmCart(userId string) (*types.Cart, error)
 	MarkCartAsBought(cartId string) error
+	MarkCartAsNotBought(cartId string) error
 	UpdateAmountToPay(cartId string, amountToPay int) error
 	DeleteCart(cartId string, orderService IOrderService, cartService ICartService, productService IProductService) error
 }
@@ -103,7 +105,8 @@ func (s CartService) GetBoughtCarts(userId string) ([]types.Cart, error) {
 	return carts, nil
 }
 
-func (s CartService) ConfirmAndBuyCart(placeId string, userId string, orderService IOrderService, userService IUserService, buyService IBuyService) (*types.Cart, error) {
+func (s CartService) ConfirmCart(placeId string, userId string,
+	orderService IOrderService, userService IUserService) (*types.Cart, error) {
 	cart, err := s.GetCart(userId)
 	if err != nil {
 		return nil, err
@@ -122,48 +125,82 @@ func (s CartService) ConfirmAndBuyCart(placeId string, userId string, orderServi
 	if user.Wallet < cart.AmountToPay {
 		return nil, fmt.Errorf("You have not enough money")
 	}
-	confirmedCart, err := s.confirmCart(placeId, userId, cart.Id)
+	err = s.setPlaceToCart(placeId, userId, cart.Id)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(*confirmedCart.PlaceId)
-	err = buyService.BuyCart(*confirmedCart)
+
+	confirmedCart, err := s.confirmCart(userId)
 	if err != nil {
 		return nil, err
 	}
 	return confirmedCart, nil
 }
+
+func (s CartService) UnconfirmCart(userId string) (*types.Cart, error) {
+	confirmQuery := fmt.Sprintf("UPDATE %s SET \"IsConfirmed\" = $1 WHERE \"UserId\" = $2", s.tableName())
+	_, err := s.DB.Exec(confirmQuery, false, userId)
+	if err != nil {
+		return nil, err
+	}
+
+	foundCart, err := s.getCartFromDB(userId, true)
+	if err != nil {
+		return nil, err
+	}
+
+	return foundCart, nil
+}
+
 func (s CartService) MarkCartAsBought(cartid string) error {
-	query := fmt.Sprintf("UPDATE %s SET \"IsBought\" = $1 WHERE \"Id\" = $2", s.tableName())
-	_, err := s.DB.Exec(query, true, cartid)
+	err := s.changeCartBought(cartid, true)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (s CartService) confirmCart(placeId, userId, cartId string) (*types.Cart, error) {
-	query := fmt.Sprintf("UPDATE %s SET \"PlaceId\" = $1 WHERE \"UserId\" = $2 AND \"Id\" = $3", s.tableName())
-	res, err := s.DB.Exec(query, placeId, userId, cartId)
+func (s CartService) MarkCartAsNotBought(cartid string) error {
+	err := s.changeCartBought(cartid, false)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	if r, e := res.RowsAffected(); r == 0 || e != nil {
-		return nil, fmt.Errorf("Place does not set!!!")
-	}
+	return nil
+}
 
+func (s CartService) changeCartBought(cartid string, isBought bool) error {
+	query := fmt.Sprintf("UPDATE %s SET \"IsBought\" = $1 WHERE \"Id\" = $2", s.tableName())
+	_, err := s.DB.Exec(query, isBought, cartid)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s CartService) setPlaceToCart(placeId, userId, cartId string) error {
+	query := fmt.Sprintf("UPDATE %s SET \"PlaceId\" = $1 WHERE \"UserId\" = $2 AND \"Id\" = $3", s.tableName())
+	_, err := s.DB.Exec(query, placeId, userId, cartId)
+	if err != nil {
+		return err
+	}
 	foundCart, err := s.getCartFromDB(userId, false)
 	if err != nil {
-		return nil, err
+		return err
 	}
+	if foundCart.PlaceId == nil {
+		return fmt.Errorf("Error to set place to cart !!!")
+	}
+	return nil
+}
 
+func (s CartService) confirmCart(userId string) (*types.Cart, error) {
 	confirmQuery := fmt.Sprintf("UPDATE %s SET \"IsConfirmed\" = $1 WHERE \"UserId\" = $2", s.tableName())
-	_, err = s.DB.Exec(confirmQuery, true, userId)
+	_, err := s.DB.Exec(confirmQuery, true, userId)
 	if err != nil {
 		return nil, err
 	}
 
-	foundCart, err = s.getCartFromDB(userId, true)
+	foundCart, err := s.getCartFromDB(userId, true)
 	if err != nil {
 		return nil, err
 	}

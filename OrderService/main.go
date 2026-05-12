@@ -28,7 +28,8 @@ var orderService services.IOrderService
 var cartService services.ICartService
 var userService services.IUserService
 var productService services.IProductService
-var buyService services.BuyService
+
+//var buyService services.BuyService
 
 func getConnStr(dbUser, dbPassword, dbName string) string {
 	return fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", dbUser, dbPassword, dbName)
@@ -40,7 +41,7 @@ func initServices(ctx *gin.Context, store *MainStore) error {
 		return err
 	}
 	userService = services.UserService{AuthHeader: authHeader}
-	buyService = services.BuyService{AuthHeader: authHeader}
+	//buyService = services.BuyService{AuthHeader: authHeader}
 	placeService = services.PlaceService{DB: store.DB}
 	orderService = services.OrderService{DB: store.DB}
 	cartService = services.CartService{DB: store.DB}
@@ -59,7 +60,6 @@ func getAuthHeader(ctx *gin.Context) (string, error) {
 
 func main() {
 	r := gin.Default()
-	// Use Default() for basic "allow all origins"
 	r.Use(cors.New(cors.Config{
 		AllowAllOrigins:  true,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
@@ -94,7 +94,9 @@ func main() {
 			wa.GET("/get-cart", s.GetCart)
 			wa.GET("/get-bought-carts", s.GetBoughtCarts)
 			wa.POST("/confirm-cart", s.ConfirmCart)
+			wa.POST("/unconfirm-cart", s.UnconfirmCart)
 			wa.POST("/mark-cart-as-bought", s.MarkCartAsBought)
+			wa.POST("/mark-cart-as-not-bought", s.MarkCartAsNotBought)
 			wa.DELETE("/delete-cart/:id", s.DeleteCart)
 
 			wa.PUT("/add-order", s.AddOrder)
@@ -193,7 +195,7 @@ func (s *MainStore) ConfirmCart(ctx *gin.Context) {
 	initServices(ctx, s)
 	userId, _ := ctx.Get("id") // protected data
 	placeId := ctx.Query("placeId")
-	cart, err := cartService.ConfirmAndBuyCart(placeId, fmt.Sprint(userId), orderService, userService, buyService)
+	cart, err := cartService.ConfirmCart(placeId, fmt.Sprint(userId), orderService, userService)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -202,7 +204,24 @@ func (s *MainStore) ConfirmCart(ctx *gin.Context) {
 }
 
 // @BasePath /api
-// @Description confirm cart
+// @Description Compensating actions for cart confirm
+// @Tags order-service/cart
+// @Accept json
+// @Success 200 {string} Ok
+// @Router /order-service/unconfirm-cart [POST]
+func (s *MainStore) UnconfirmCart(ctx *gin.Context) {
+	initServices(ctx, s)
+	userId, _ := ctx.Get("id") // protected data
+	cart, err := cartService.UnconfirmCart(fmt.Sprint(userId))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, cart)
+}
+
+// @BasePath /api
+// @Description mark cart as bought
 // @Tags order-service/cart
 // @Accept json
 // @Param   cartId	query	string	false	"Cart id"
@@ -217,6 +236,24 @@ func (s *MainStore) MarkCartAsBought(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, "Cart successfuly bought")
+}
+
+// @BasePath /api
+// @Description compensation actions for marking cart as bought
+// @Tags order-service/cart
+// @Accept json
+// @Param   cartId	query	string	false	"Cart id"
+// @Success 200 {string} Ok
+// @Router /order-service/mark-cart-as-not-bought [POST]
+func (s *MainStore) MarkCartAsNotBought(ctx *gin.Context) {
+	initServices(ctx, s)
+	cartId := ctx.Query("cartId")
+	err := cartService.MarkCartAsNotBought(cartId)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, "Cart successfuly unmark")
 }
 
 // @BasePath /api

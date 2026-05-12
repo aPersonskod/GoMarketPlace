@@ -5,10 +5,11 @@ export class ApiHelper {
     base = (serviceName) => {
         return `http://${serviceName}:8080`;
     };
-    buyServiceBaseAddress =       `${this.dev(false)}3/api/buy-service`;
-    orderServiceBaseAddress =     `${this.dev(false)}2/api/order-service`;
-    productServiceBaseAddress =   `${this.dev(false)}1/api/product-service`;
-    userServiceBaseAddress =      `${this.dev(false)}0/api/user-service`;
+    orchestratorServiceBaseAddress =       `${this.dev(false)}4/api`;
+    buyServiceBaseAddress =                `${this.dev(false)}3/api/buy-service`;
+    orderServiceBaseAddress =              `${this.dev(false)}2/api/order-service`;
+    productServiceBaseAddress =            `${this.dev(false)}1/api/product-service`;
+    userServiceBaseAddress =               `${this.dev(false)}0/api/user-service`;
 
     getUser = async () => {
         let token = this.getAccessToken();

@@ -22,9 +22,9 @@ type MainStore struct {
 	DB *sql.DB
 }
 
-var buy_service services.IBuyService
-var order_service services.IOrderService
-var user_service services.IUserService
+var buyService services.IBuyService
+var orderService services.IOrderService
+var userService services.IUserService
 
 func getConnStr(dbUser, dbPassword, dbName string) string {
 	return fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", dbUser, dbPassword, dbName)
@@ -44,12 +44,12 @@ func initServices(ctx *gin.Context, store *MainStore) error {
 		return err
 	}
 
-	user_service = services.UserService{AuthHeader: authHeader}
-	order_service = services.OrderService{AuthHeader: authHeader}
-	buy_service = services.BuyService{
+	userService = services.UserService{AuthHeader: authHeader}
+	orderService = services.OrderService{AuthHeader: authHeader}
+	buyService = services.BuyService{
 		DB:           store.DB,
-		OrderService: order_service,
-		UserService:  user_service,
+		OrderService: orderService,
+		UserService:  userService,
 	}
 
 	return nil
@@ -84,34 +84,12 @@ func main() {
 		gr := v1.Group("/buy-service")
 		{
 			wa := gr.Use(middleware.JwtAuthMiddleware())
-			wa.GET("/get-report-by-id/:id", s.GetReportById)
 			wa.GET("/get-reports-by-userid", s.GetReportsByUserId)
 			wa.POST("/buy-cart", s.BuyCart)
 		}
 	}
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
 	r.Run(fmt.Sprintf(":%s", configs.Env.Port))
-}
-
-// @BasePath /api
-// @Description description of function that get report by id
-// @Tags buy-service
-// @Accept json
-// @Produce json
-// @Param   id	path	string		true	"Report ID"
-// @Success 200 {string} Ok
-// @Router /buy-service/get-report-by-id/{id} [get]
-func (s MainStore) GetReportById(ctx *gin.Context) {
-	initServices(ctx, &s)
-	reportId := ctx.Param("id")
-	userId, _ := ctx.Get("id") // protected data
-
-	reportDto, err := buy_service.GetReportById(reportId, fmt.Sprint(userId), user_service, order_service)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	ctx.JSON(http.StatusOK, reportDto)
 }
 
 // @BasePath /api
@@ -125,7 +103,7 @@ func (s MainStore) GetReportsByUserId(ctx *gin.Context) {
 	initServices(ctx, &s)
 	userId, _ := ctx.Get("id") // protected data
 
-	reports, err := buy_service.GetReportsByUserId(fmt.Sprint(userId), user_service, order_service)
+	reports, err := buyService.GetReportsByUserId(fmt.Sprint(userId))
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -149,7 +127,7 @@ func (s MainStore) BuyCart(ctx *gin.Context) {
 		return
 	}
 
-	err := buy_service.BuyCart(cart)
+	err := buyService.BuyCart(cart)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

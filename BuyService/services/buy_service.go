@@ -12,8 +12,7 @@ import (
 )
 
 type IBuyService interface {
-	GetReportById(reportId, userId string, userService IUserService, orderService IOrderService) (*types.BuyReportDto, error)
-	GetReportsByUserId(userId string, userService IUserService, orderService IOrderService) ([]types.BuyReportDto, error)
+	GetReportsByUserId(userId string) ([]types.BuyReportDto, error)
 	BuyCart(cart types.CartDto) error
 }
 
@@ -25,30 +24,6 @@ type BuyService struct {
 
 func (s BuyService) tableName() string {
 	return "public.\"BuyReports\""
-}
-
-// IT DOES NOT WORK, IDK WHY DO I NEED THIS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-func (s BuyService) GetReportById(reportId, userId string, userService IUserService, orderService IOrderService) (*types.BuyReportDto, error) {
-	query := fmt.Sprintf("SELECT * FROM %s WHERE \"Id\" = $1", s.tableName())
-	rows, err := s.DB.Query(query, reportId)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	r := types.BuyReport{}
-	for rows.Next() {
-		err = rows.Scan(&r.Id, &r.CartId, &r.SaleDate)
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-	}
-	reportDto, err := s.getBuyReportDto(r, types.CartDto{}, userService, orderService) // get error, do not use it !!!
-	if err != nil {
-		return nil, err
-	}
-	return reportDto, nil
 }
 
 func (s BuyService) getBuyReportByCart(cart *types.CartDto) (*types.BuyReport, error) {
@@ -70,7 +45,7 @@ func (s BuyService) getBuyReportByCart(cart *types.CartDto) (*types.BuyReport, e
 	return &r, nil
 }
 
-func (s BuyService) GetReportsByUserId(userId string, userService IUserService, orderService IOrderService) ([]types.BuyReportDto, error) {
+func (s BuyService) GetReportsByUserId(userId string) ([]types.BuyReportDto, error) {
 	boughtCarts, err := s.OrderService.GetBoughtCarts(userId)
 	if err != nil {
 		return nil, err
@@ -85,7 +60,7 @@ func (s BuyService) GetReportsByUserId(userId string, userService IUserService, 
 			fmt.Println(err.Error())
 			continue
 		}
-		rDto, err := s.getBuyReportDto(*r, boughtCart, userService, orderService)
+		rDto, err := s.getBuyReportDto(*r, boughtCart)
 		if err != nil {
 			return nil, err
 		}
@@ -105,6 +80,9 @@ func (s BuyService) GetReportsByUserId(userId string, userService IUserService, 
 
 // TODO need to add SAGA
 func (s BuyService) BuyCart(cart types.CartDto) error {
+	if cart.IsConfirmed != true {
+		return fmt.Errorf("Can't buy cart, cart is not confirmed !!!")
+	}
 	if cart.PlaceId == "" {
 		return fmt.Errorf("Can't buy cart, place is required !!!")
 	}
@@ -119,19 +97,7 @@ func (s BuyService) BuyCart(cart types.CartDto) error {
 	// something important and very slow
 	time.Sleep(time.Second * 5)
 
-	userDto, err := s.UserService.SpendMoney(cart.UserId, cart.AmountToPay)
-	if err != nil {
-		return err
-	}
-	if userDto == nil {
-		return fmt.Errorf("Can not find user and buy cart !!!")
-	}
-
 	err = s.addBuyReport(cart.Id)
-	if err != nil {
-		return err
-	}
-	err = s.OrderService.MarkCartAsBought(cart.Id)
 	if err != nil {
 		return err
 	}
@@ -153,23 +119,22 @@ func (s BuyService) addBuyReport(cartId string) error {
 	return nil
 }
 
-func (s BuyService) getBuyReportDto(buyReport types.BuyReport, cart types.CartDto,
-	userService IUserService, orderService IOrderService) (*types.BuyReportDto, error) {
-	userDto, err := userService.GetUser()
+func (s BuyService) getBuyReportDto(buyReport types.BuyReport, cart types.CartDto) (*types.BuyReportDto, error) {
+	userDto, err := s.UserService.GetUser()
 	if err != nil {
 		return nil, err
 	}
-	placeDto, err := orderService.GetPlace(cart.PlaceId)
+	placeDto, err := s.OrderService.GetPlace(cart.PlaceId)
 	if err != nil {
 		return nil, err
 	}
-	orders, err := orderService.GetOrders(cart.Id)
+	orders, err := s.OrderService.GetOrders(cart.Id)
 	if err != nil {
 		return nil, err
 	}
 	orderDtos := []types.OrderEntity{}
 	for _, order := range orders {
-		productDto, err := orderService.GetProduct(order.OrderedProductId)
+		productDto, err := s.OrderService.GetProduct(order.OrderedProductId)
 		if err != nil {
 			return nil, err
 		}

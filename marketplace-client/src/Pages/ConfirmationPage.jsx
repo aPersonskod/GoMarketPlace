@@ -43,7 +43,7 @@ const ConfirmationPage = () => {
     const confirmCart = async () => {
         try {
             let token = apiHelper.getAccessToken();
-            let query = `${apiHelper.orderServiceBaseAddress}/confirm-cart?placeId=${selectedPlaceId}`;
+            let query = `${apiHelper.orchestratorServiceBaseAddress}/buy-actions/buy-cart?placeId=${selectedPlaceId}`;
             let options = {
                 method: 'POST',
                 headers: {
@@ -91,7 +91,7 @@ const ConfirmationPage = () => {
     }
 
     if (loading) return <div>Loading data...</div>;
-    if (error) return <div>Error: {error.message}</div>;
+    if (error) return <div>{error.message}</div>;
     
     return (
       <>
