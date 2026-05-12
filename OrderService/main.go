@@ -29,8 +29,6 @@ var cartService services.ICartService
 var userService services.IUserService
 var productService services.IProductService
 
-//var buyService services.BuyService
-
 func getConnStr(dbUser, dbPassword, dbName string) string {
 	return fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", dbUser, dbPassword, dbName)
 }
@@ -41,7 +39,6 @@ func initServices(ctx *gin.Context, store *MainStore) error {
 		return err
 	}
 	userService = services.UserService{AuthHeader: authHeader}
-	//buyService = services.BuyService{AuthHeader: authHeader}
 	placeService = services.PlaceService{DB: store.DB}
 	orderService = services.OrderService{DB: store.DB}
 	cartService = services.CartService{DB: store.DB}

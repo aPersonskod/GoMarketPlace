@@ -3,7 +3,6 @@ package services
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"orchestrator_service/configs"
 	"orchestrator_service/types"
 )
@@ -18,59 +17,31 @@ type UserService struct {
 }
 
 func (s UserService) SpendMoney(money int) (*types.UserDto, error) {
-	client := &http.Client{}
 	url := fmt.Sprintf("%s/api/user-service/spend-money?money=%d", configs.Env.UserServiceAddressDev, money)
-	req, err := http.NewRequest("POST", url, nil)
+	resp, err := ServiceHelper{}.RunRequest("POST", url, &s.AuthHeader, nil)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", s.AuthHeader)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("Error sending request: %s", err.Error())
-	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusOK {
-		userDto := types.UserDto{}
-		err = json.NewDecoder(resp.Body).Decode(&userDto)
-		if err != nil {
-			return nil, err
-		}
-		return &userDto, nil
+	userDto := types.UserDto{}
+	err = json.NewDecoder(resp.Body).Decode(&userDto)
+	if err != nil {
+		return nil, err
 	}
-	errResp := types.ErrorResponse{}
-	json.NewDecoder(resp.Body).Decode(&errResp)
-	return nil, fmt.Errorf("Server returned error: %s (Status: %d)", errResp.Error, resp.StatusCode)
+	return &userDto, nil
 }
 
 func (s UserService) WalletReplenishment(money int) (*types.UserDto, error) {
-	client := &http.Client{}
 	url := fmt.Sprintf("%s/api/user-service/wallet-replenishment?money=%d", configs.Env.UserServiceAddressDev, money)
-	req, err := http.NewRequest("POST", url, nil)
+	resp, err := ServiceHelper{}.RunRequest("POST", url, &s.AuthHeader, nil)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", s.AuthHeader)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("Error sending request: %s", err.Error())
-	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusOK {
-		userDto := types.UserDto{}
-		err = json.NewDecoder(resp.Body).Decode(&userDto)
-		if err != nil {
-			return nil, err
-		}
-		return &userDto, nil
+	userDto := types.UserDto{}
+	err = json.NewDecoder(resp.Body).Decode(&userDto)
+	if err != nil {
+		return nil, err
 	}
-	errResp := types.ErrorResponse{}
-	json.NewDecoder(resp.Body).Decode(&errResp)
-	return nil, fmt.Errorf("Server returned error: %s (Status: %d)", errResp.Error, resp.StatusCode)
+	return &userDto, nil
 }

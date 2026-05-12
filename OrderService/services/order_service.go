@@ -135,7 +135,7 @@ func (s OrderService) getAmountToPay(cartId string, productService IProductServi
 	for _, order := range orders {
 		product, err := productService.GetProduct(order.OrderedProductId)
 		if err != nil {
-			continue
+			return 0, err
 		}
 		amountToPay += product.Cost * order.Quantity
 	}

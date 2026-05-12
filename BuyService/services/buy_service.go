@@ -78,7 +78,6 @@ func (s BuyService) GetReportsByUserId(userId string) ([]types.BuyReportDto, err
 	return reports, nil
 }
 
-// TODO need to add SAGA
 func (s BuyService) BuyCart(cart types.CartDto) error {
 	if cart.IsConfirmed != true {
 		return fmt.Errorf("Can't buy cart, cart is not confirmed !!!")
