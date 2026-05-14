@@ -2,7 +2,9 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"user_service/configs"
@@ -14,6 +16,9 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/lib/pq"
 	swaggerfiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -23,8 +28,9 @@ type MainStore struct {
 	DB *sql.DB
 }
 
-func getConnStr(dbUser, dbPassword, dbName string) string {
-	return fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", dbUser, dbPassword, dbName)
+func getConnStr(dbHost, dbPort, dbUser, dbPassword, dbName string) string {
+	//return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", dbHost, dbPort, dbUser, dbPassword, dbName)
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", dbUser, dbPassword, dbHost, dbPort, dbName)
 }
 
 func initServices(store *MainStore) error {
@@ -39,15 +45,35 @@ func main() {
 
 	r := gin.Default()
 	r.Use(cors.New(cors.Config{
-		AllowOrigins: []string{"http://localhost:5173"},
-		AllowMethods: []string{"GET", "POST", "PUT", "DELETE"},
-		AllowHeaders: []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		AllowAllOrigins:  true,
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
 	}))
 
-	db, err := sql.Open("postgres", getConnStr(configs.Env.DbUser, configs.Env.DbPassword, configs.Env.DbName))
+	db, err := sql.Open("postgres", getConnStr(configs.Env.DbHost, configs.Env.DbPort, configs.Env.DbUser, configs.Env.DbPassword, configs.Env.DbName))
 	if err != nil {
 		panic(err.Error())
 	}
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	if err != nil {
+		panic(err.Error())
+	}
+
+	m, err := migrate.NewWithDatabaseInstance(
+		"file://migrations",
+		"postgres",
+		driver,
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		log.Fatalf("Migration up failed: %v", err)
+	}
+	fmt.Println("Migration up completed successfully")
 
 	initServices(&MainStore{DB: db})
 

@@ -10,6 +10,8 @@ import (
 type Config struct {
 	PublicHost     string
 	Port           string
+	DbHost         string
+	DbPort         string
 	DbUser         string
 	DbPassword     string
 	DbName         string
@@ -33,6 +35,8 @@ func initConfig() *Config {
 	return &Config{
 		PublicHost:     os.Getenv("PUBLIC_HOST"),
 		Port:           os.Getenv("PORT"),
+		DbHost:         os.Getenv("DB_HOST"),
+		DbPort:         os.Getenv("DB_PORT"),
 		DbUser:         os.Getenv("DBUSER"),
 		DbPassword:     os.Getenv("DBPASSWORD"),
 		DbName:         os.Getenv("DBNAME"),

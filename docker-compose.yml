@@ -1,0 +1,44 @@
+networks:
+  marketplace-dev:
+    driver: bridge
+services:
+  postgres_user_service_db:
+    container_name: postgres_user_service
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: marketplace-users-db
+    ports:
+      - "5432:5432"
+    networks:
+      - marketplace-dev
+    volumes:
+      - db_us_data:/var/lib/postgresql/18/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d marketplace-users-db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  user-service-app:
+    container_name: user-service
+    build:
+      context: ./UserService
+      dockerfile: Dockerfile
+    networks:
+      - marketplace-dev
+    ports:
+      - "8080:8080"
+    environment:
+      DB_HOST: postgres_user_service_db
+      DB_PORT: 5432
+      DBUSER: postgres
+      DBPASSWORD: password
+      DBNAME: marketplace-users-db
+      JWTSECRET: my_important_secret
+    depends_on:
+      postgres_user_service_db:
+        condition: service_healthy   # wait for healthy Postgres
+volumes:
+  db_us_data:
+    
