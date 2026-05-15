@@ -2,6 +2,44 @@ networks:
   marketplace-dev:
     driver: bridge
 services:
+  postgres_product_service_db:
+    container_name: postgres_product_service
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: marketplace-product-catalog-db
+    ports:
+      - "5433:5432"
+    networks:
+      - marketplace-dev
+    volumes:
+      - db_ps_data:/var/lib/postgresql/18/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d marketplace-product-catalog-db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  product_service_app:
+    container_name: product_service
+    build:
+      context: ./ProductService
+      dockerfile: Dockerfile
+    networks:
+      - marketplace-dev
+    ports:
+      - "8081:8081"
+    environment:
+      DB_HOST: postgres_product_service_db
+      DB_PORT: 5432
+      DBUSER: postgres
+      DBPASSWORD: password
+      DBNAME: marketplace-product-catalog-db
+      JWTSECRET: my_important_secret
+    depends_on:
+      postgres_product_service_db:
+        condition: service_healthy   # wait for healthy Postgres
+
   postgres_user_service_db:
     container_name: postgres_user_service
     image: postgres:latest
@@ -40,5 +78,6 @@ services:
       postgres_user_service_db:
         condition: service_healthy   # wait for healthy Postgres
 volumes:
+  db_ps_data:
   db_us_data:
     

@@ -21,8 +21,9 @@ type MainStore struct {
 	DB *gorm.DB
 }
 
-func getConnStr(dbUser, dbPassword, dbName string) string {
-	return fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", dbUser, dbPassword, dbName)
+func getConnStr(dbHost, dbPort, dbUser, dbPassword, dbName string) string {
+	//return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", dbHost, dbPort, dbUser, dbPassword, dbName)
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", dbUser, dbPassword, dbHost, dbPort, dbName)
 }
 
 func main() {
@@ -36,7 +37,11 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	db, err := gorm.Open(postgres.Open(getConnStr(configs.Env.DbUser, configs.Env.DbPassword, configs.Env.DbName)), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(getConnStr(configs.Env.DbHost, configs.Env.DbPort, configs.Env.DbUser, configs.Env.DbPassword, configs.Env.DbName)), &gorm.Config{})
+	if err != nil {
+		panic(err.Error())
+	}
+	err = migrate(db)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -64,6 +69,39 @@ func main() {
 	}
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
 	r.Run(fmt.Sprintf(":%s", configs.Env.Port))
+}
+
+func migrate(db *gorm.DB) error {
+	var count int64
+	db.Model(&Product{}).Count(&count)
+
+	if count == 0 {
+		err := db.AutoMigrate(&Product{})
+		if err != nil {
+			return err
+		}
+		db.Create(&Product{
+			Id:   "304e34b1-5267-433a-8d7d-a0abd761da11",
+			Name: "Шорты",
+			Cost: 200,
+		})
+		db.Create(&Product{
+			Id:   "35e52d12-62f8-4451-ab81-b549fa3f066b",
+			Name: "Носки",
+			Cost: 50,
+		})
+		db.Create(&Product{
+			Id:   "388ea4e6-f760-4735-9aa5-e3df9906b49c",
+			Name: "Трусы",
+			Cost: 70,
+		})
+		db.Create(&Product{
+			Id:   "ca173802-206e-4a88-a6cc-2ac93e590fba",
+			Name: "Футболка",
+			Cost: 100,
+		})
+	}
+	return nil
 }
 
 type Product struct {
