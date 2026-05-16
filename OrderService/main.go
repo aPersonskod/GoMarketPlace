@@ -14,6 +14,9 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/lib/pq"
 	swaggerfiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -29,8 +32,9 @@ var cartService services.ICartService
 var userService services.IUserService
 var productService services.IProductService
 
-func getConnStr(dbUser, dbPassword, dbName string) string {
-	return fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", dbUser, dbPassword, dbName)
+func getConnStr(dbHost, dbPort, dbUser, dbPassword, dbName string) string {
+	//return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", dbHost, dbPort, dbUser, dbPassword, dbName)
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", dbUser, dbPassword, dbHost, dbPort, dbName)
 }
 
 func initServices(ctx *gin.Context, store *MainStore) error {
@@ -65,7 +69,11 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	db, err := sql.Open("postgres", getConnStr(configs.Env.DbUser, configs.Env.DbPassword, configs.Env.DbName))
+	db, err := sql.Open("postgres", getConnStr(configs.Env.DbHost, configs.Env.DbPort, configs.Env.DbUser, configs.Env.DbPassword, configs.Env.DbName))
+	if err != nil {
+		panic(err.Error())
+	}
+	err = doMigration(db)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -104,8 +112,27 @@ func main() {
 	r.Run(fmt.Sprintf(":%s", configs.Env.Port))
 }
 
-var connStr string = fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable",
-	configs.Env.DbUser, configs.Env.DbPassword, configs.Env.DbName)
+func doMigration(db *sql.DB) error {
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	if err != nil {
+		panic(err.Error())
+	}
+
+	m, err := migrate.NewWithDatabaseInstance(
+		"file://migrations",
+		"postgres",
+		driver,
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		panic(fmt.Sprintf("Migration up failed: %v", err))
+	}
+	fmt.Println("Migration up completed successfully")
+	return nil
+}
 
 // @BasePath /api
 // @Summary GetPlaces

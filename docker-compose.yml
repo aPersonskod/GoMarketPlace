@@ -2,6 +2,47 @@ networks:
   marketplace-dev:
     driver: bridge
 services:
+
+  postgres_order_service_db:
+    container_name: postgres_order_service
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: marketplace-shopping-cart-db
+    ports:
+      - "5434:5432"
+    networks:
+      - marketplace-dev
+    volumes:
+      - db_os_data:/var/lib/postgresql/18/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d marketplace-shopping-cart-db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  order_service_app:
+    container_name: order_service
+    build:
+      context: ./OrderService
+      dockerfile: Dockerfile
+    networks:
+      - marketplace-dev
+    ports:
+      - "8082:8082"
+    environment:
+      DB_HOST: postgres_order_service_db
+      DB_PORT: 5432
+      DBUSER: postgres
+      DBPASSWORD: password
+      DBNAME: marketplace-shopping-cart-db
+      JWTSECRET: my_important_secret
+      PRODUCT_SERVICE_ADDRESS_DEV: http://localhost:8081
+      USER_SERVICE_ADDRESS_DEV: http://localhost:8080
+    depends_on:
+      postgres_product_service_db:
+        condition: service_healthy   # wait for healthy Postgres
+
   postgres_product_service_db:
     container_name: postgres_product_service
     image: postgres:latest
@@ -78,6 +119,7 @@ services:
       postgres_user_service_db:
         condition: service_healthy   # wait for healthy Postgres
 volumes:
+  db_os_data:
   db_ps_data:
   db_us_data:
     
