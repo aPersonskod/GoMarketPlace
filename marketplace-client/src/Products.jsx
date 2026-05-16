@@ -12,7 +12,8 @@ function Products({cart, setAmmountToPay, refreshCartFunc}) {
         try {
             const response = await fetch(`${apiHelper.productServiceBaseAddress}/get-all`);
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                let myLocalError = await response.json();
+                throw new Error(`${myLocalError.error}`);
             }
             const result = await response.json();
             setProducts(result);

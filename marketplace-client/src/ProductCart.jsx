@@ -13,7 +13,8 @@ function ProductCart({cart}) {
             if(cart === null) return;
             const response = await fetch(`${apiHelper.orderServiceBaseAddress}/get-cart-orders/${cart.id}`);
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                let myLocalError = await response.json();
+                throw new Error(`${myLocalError.error}`);
             }
             const result = await response.json();
             setOrders(result);

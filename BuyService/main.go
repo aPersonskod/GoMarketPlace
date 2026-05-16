@@ -6,10 +6,14 @@ import (
 	"buy_service/services"
 	"buy_service/types"
 	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/gin-contrib/cors"
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 
 	docs "buy_service/docs"
 
@@ -22,12 +26,36 @@ type MainStore struct {
 	DB *sql.DB
 }
 
-var buyService services.IBuyService
-var orderService services.IOrderService
-var userService services.IUserService
+func GetUserService(ctx *gin.Context) (*services.UserService, error) {
+	authHeader, err := getAuthHeader(ctx)
+	if err != nil {
+		return nil, err
+	}
+	s := services.UserService{AuthHeader: authHeader}
+	return &s, nil
+}
+func GetOrderService(ctx *gin.Context) (*services.OrderService, error) {
+	authHeader, err := getAuthHeader(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &services.OrderService{AuthHeader: authHeader}, nil
+}
+func GetBuyService(db *sql.DB, ctx *gin.Context) (*services.BuyService, error) {
+	orderService, err := GetOrderService(ctx)
+	if err != nil {
+		return nil, err
+	}
+	userService, err := GetUserService(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &services.BuyService{DB: db, OrderService: orderService, UserService: userService}, nil
+}
 
-func getConnStr(dbUser, dbPassword, dbName string) string {
-	return fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", dbUser, dbPassword, dbName)
+func getConnStr(dbHost, dbPort, dbUser, dbPassword, dbName string) string {
+	//return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", dbHost, dbPort, dbUser, dbPassword, dbName)
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", dbUser, dbPassword, dbHost, dbPort, dbName)
 }
 
 func getAuthHeader(ctx *gin.Context) (string, error) {
@@ -36,23 +64,6 @@ func getAuthHeader(ctx *gin.Context) (string, error) {
 		return "", fmt.Errorf("Auth header required")
 	}
 	return authHeader, nil
-}
-
-func initServices(ctx *gin.Context, store *MainStore) error {
-	authHeader, err := getAuthHeader(ctx)
-	if err != nil {
-		return err
-	}
-
-	userService = services.UserService{AuthHeader: authHeader}
-	orderService = services.OrderService{AuthHeader: authHeader}
-	buyService = services.BuyService{
-		DB:           store.DB,
-		OrderService: orderService,
-		UserService:  userService,
-	}
-
-	return nil
 }
 
 func main() {
@@ -66,9 +77,17 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	db, err := sql.Open("postgres", getConnStr(configs.Env.DbUser, configs.Env.DbPassword, configs.Env.DbName))
+	db, err := sql.Open("postgres", getConnStr(configs.Env.DbHost, configs.Env.DbPort, configs.Env.DbUser, configs.Env.DbPassword, configs.Env.DbName))
 	if err != nil {
 		panic(err.Error())
+	}
+	err = doMigration(db)
+	if err != nil {
+		panic(fmt.Sprintf("migration err: %s", err.Error()))
+	}
+	err = db.Ping()
+	if err != nil {
+		panic(fmt.Sprintf("db ping err: %s", err.Error()))
 	}
 	s := MainStore{DB: db}
 
@@ -92,6 +111,28 @@ func main() {
 	r.Run(fmt.Sprintf(":%s", configs.Env.Port))
 }
 
+func doMigration(db *sql.DB) error {
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	if err != nil {
+		panic(err.Error())
+	}
+
+	m, err := migrate.NewWithDatabaseInstance(
+		"file://migrations",
+		"postgres",
+		driver,
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		panic(fmt.Sprintf("Migration up failed: %v", err))
+	}
+	fmt.Println("Migration up completed successfully")
+	return nil
+}
+
 // @BasePath /api
 // @Description description of function that get reports by user's id
 // @Tags buy-service
@@ -100,7 +141,11 @@ func main() {
 // @Success 200 {string} Ok
 // @Router /buy-service/get-reports-by-userid [get]
 func (s MainStore) GetReportsByUserId(ctx *gin.Context) {
-	initServices(ctx, &s)
+	buyService, err := GetBuyService(s.DB, ctx)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 	userId, _ := ctx.Get("id") // protected data
 
 	reports, err := buyService.GetReportsByUserId(fmt.Sprint(userId))
@@ -120,14 +165,18 @@ func (s MainStore) GetReportsByUserId(ctx *gin.Context) {
 // @Success 200 {string} Ok
 // @Router /buy-service/buy-cart [POST]
 func (s MainStore) BuyCart(ctx *gin.Context) {
-	initServices(ctx, &s)
+	buyService, err := GetBuyService(s.DB, ctx)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 	cart := types.CartDto{}
 	if err := ctx.ShouldBindJSON(&cart); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	err := buyService.BuyCart(cart)
+	err = buyService.BuyCart(cart)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

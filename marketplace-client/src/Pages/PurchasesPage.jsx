@@ -22,7 +22,8 @@ const PurchasesPage = () => {
             }
             const response = await fetch(query, options);
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                let myLocalError = await response.json();
+                throw new Error(`${myLocalError.error}`);
             }
             const result = await response.json();
             setBuyActions(result);

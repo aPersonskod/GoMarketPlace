@@ -30,7 +30,8 @@ const ProductCatalogPage = () => {
             if (!response.ok) {
                 setCart(null);
                 return;
-                throw new Error(`HTTP error! status: ${response.status}`);
+                let myLocalError = await response.json();
+                throw new Error(`${myLocalError.error}`);
             }   
             const cartResult = await response.json();
             //if(cartResult.isConfirmed) setOrders([]);
@@ -56,8 +57,8 @@ const ProductCatalogPage = () => {
             });
 
             if (!response.ok) {
-                //throw new Error(`HTTP error! status: ${response.status}`);
-                alert(`HTTP error! status: ${response.status}`);
+                let myLocalError = await response.json();
+                throw new Error(`${myLocalError.error}`);
             }
 
             const data = await response.json();

@@ -147,7 +147,9 @@ const ProductQuantitySelector = ({ productName, productCost, productId, setAmmou
 
             if (!response.ok) {
                 //throw new Error(`HTTP error! status: ${response.status}`);
-                alert(`ADD HTTP error! status: ${response.status}`);
+                let myLocalError = await response.json();
+                throw new Error(`${myLocalError.error}`);
+                alert(`ADD HTTP error: ${myLocalError.error}`);
             }
 
             const data = await response.json();

@@ -64,7 +64,8 @@ function Header() {
                     navigate('/auth');
                     return;
                 }
-                alert(`HTTP error! status: ${response.status}`);
+                let myLocalError = await response.json();
+                alert(`HTTP error! status: ${myLocalError.error}`);
             }
 
             const data = await response.json();

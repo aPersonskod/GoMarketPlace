@@ -74,7 +74,8 @@ const OrderedProduct = ({ productId, cartId, quantity}) => {
 
             if (!response.ok) {
                 //throw new Error(`HTTP error! status: ${response.status}`);
-                alert(`HTTP error! status: ${response.status}`);
+                let myLocalError = await response.json();
+                throw new Error(`${myLocalError.error}`);
             }
 
             const data = await response.json();
@@ -92,7 +93,9 @@ const OrderedProduct = ({ productId, cartId, quantity}) => {
         try {
             const response = await fetch(`${apiHelper.productServiceBaseAddress}/${productId}`);
             if (!response.ok) {
-                alert(`HTTP error! status: ${response.status}`);
+                let myLocalError = await response.json();
+                alert(`HTTP error: ${myLocalError.error}`);
+                throw new Error(`${myLocalError.error}`);
             }
             const data = await response.json();
             setProduct(data);

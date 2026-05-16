@@ -2,6 +2,85 @@ networks:
   marketplace-dev:
     driver: bridge
 services:
+  frontend-app:
+    container_name: react-frontend
+    build:
+      context: ./marketplace-client
+      dockerfile: Dockerfile
+    ports:
+      - "3000:5173"
+    depends_on:
+      product_service_app:
+        condition: service_started
+      orchestrator_service_app:
+        condition: service_started
+
+  orchestrator_service_app:
+    container_name: orchestrator_service
+    build:
+      context: ./OrchestratorService
+      dockerfile: Dockerfile
+    networks:
+      - marketplace-dev
+    ports:
+      - "8084:8084"
+    environment:
+      JWTSECRET: my_important_secret
+      BUY_SERVICE_ADDRESS_DEV: http://buy_service_app:8083
+      ORDER_SERVICE_ADDRESS_DEV: http://order_service_app:8082
+      USER_SERVICE_ADDRESS_DEV: http://user-service-app:8080
+    depends_on:
+      user-service-app:
+        condition: service_started
+      order_service_app:
+        condition: service_started
+      buy_service_app:
+        condition: service_started
+
+  postgres_buy_service_db:
+    container_name: postgres_buy_service
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: marketplace-buy-action-db
+    ports:
+      - "5435:5432"
+    networks:
+      - marketplace-dev
+    volumes:
+      - db_bs_data:/var/lib/postgresql/18/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d marketplace-buy-action-db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  buy_service_app:
+    container_name: buy_service
+    build:
+      context: ./BuyService
+      dockerfile: Dockerfile
+    networks:
+      - marketplace-dev
+    ports:
+      - "8083:8083"
+    environment:
+      DB_HOST: postgres_buy_service_db
+      DB_PORT: 5432
+      DBUSER: postgres
+      DBPASSWORD: password
+      DBNAME: marketplace-buy-action-db
+      JWTSECRET: my_important_secret
+      ORDER_SERVICE_ADDRESS_DEV: http://order_service_app:8082
+      PRODUCT_SERVICE_ADDRESS_DEV: http://product_service_app:8081
+      USER_SERVICE_ADDRESS_DEV: http://user-service-app:8080
+    depends_on:
+      user-service-app:
+        condition: service_started
+      order_service_app:
+        condition: service_started
+      postgres_buy_service_db:
+        condition: service_healthy   # wait for healthy Postgres
 
   postgres_order_service_db:
     container_name: postgres_order_service
@@ -37,10 +116,14 @@ services:
       DBPASSWORD: password
       DBNAME: marketplace-shopping-cart-db
       JWTSECRET: my_important_secret
-      PRODUCT_SERVICE_ADDRESS_DEV: product_service_app
-      USER_SERVICE_ADDRESS_DEV: user-service-app
+      PRODUCT_SERVICE_ADDRESS_DEV: http://product_service_app:8081
+      USER_SERVICE_ADDRESS_DEV: http://user-service-app:8080
     depends_on:
-      postgres_product_service_db:
+      product_service_app:
+        condition: service_started
+      user-service-app:
+        condition: service_started
+      postgres_order_service_db:
         condition: service_healthy   # wait for healthy Postgres
 
   postgres_product_service_db:
@@ -119,7 +202,8 @@ services:
       postgres_user_service_db:
         condition: service_healthy   # wait for healthy Postgres
 volumes:
-  db_os_data:
-  db_ps_data:
   db_us_data:
+  db_ps_data:
+  db_os_data:
+  db_bs_data:
     
