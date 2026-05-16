@@ -37,8 +37,8 @@ services:
       DBPASSWORD: password
       DBNAME: marketplace-shopping-cart-db
       JWTSECRET: my_important_secret
-      PRODUCT_SERVICE_ADDRESS_DEV: http://localhost:8081
-      USER_SERVICE_ADDRESS_DEV: http://localhost:8080
+      PRODUCT_SERVICE_ADDRESS_DEV: product_service_app
+      USER_SERVICE_ADDRESS_DEV: user-service-app
     depends_on:
       postgres_product_service_db:
         condition: service_healthy   # wait for healthy Postgres
